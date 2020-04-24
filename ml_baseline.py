@@ -130,15 +130,15 @@ if __name__ == '__main__':
 
             y_train, y_test = y[train_index], y[test_index]
 
-            kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
-            cv_split = kfold.split(X)
-            try:
-                print('Overlapped Training')
-                trained_model = model_fn(X, y, list(cv_split))
-                prediction = trained_model.predict(X_test)
-                overlapped_prediction_df.loc[y.index[test_index], drug] = prediction
-            except Exception as e:
-                print(e)
+            #kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
+            #cv_split = kfold.split(X)
+            #try:
+            #    print('Overlapped Training')
+            #    trained_model = model_fn(X, y, list(cv_split))
+            #    prediction = trained_model.predict(X_test)
+            #    overlapped_prediction_df.loc[y.index[test_index], drug] = prediction
+            #except Exception as e:
+            #    print(e)
 
             kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
             cv_split = kfold.split(X_gex)
