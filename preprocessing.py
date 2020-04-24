@@ -1,8 +1,8 @@
-import os
-import gzip
 import argparse
-import numpy as np
+import os
+
 import pandas as pd
+
 import data_config
 import preprocess_ccle_gdsc_utils
 import preprocess_xena_utils

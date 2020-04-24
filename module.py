@@ -59,7 +59,7 @@ class MLPBlock(keras.Model):
 
 
 class Critic(keras.Model):
-    def __init__(self, output_dim, architecture, act_fn='leaky_relu', output_act_fn=None, name='critic', **kwargs):
+    def __init__(self, output_dim, architecture, act_fn='elu', output_act_fn=None, name='critic', **kwargs):
         super(Critic, self).__init__(name=name, **kwargs)
         self.intermediate_layers = []
         self.architecture = architecture

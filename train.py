@@ -94,20 +94,20 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
 
 
 def fine_tune_gex_encoder(encoder, raw_X,
-                              target_df,
-                              validation_X=None,
-                              validation_target_df=None,
-                              mlp_architecture=None,
-                              mlp_output_act_fn=keras.activations.sigmoid,
-                              mlp_output_dim=1,
-                              optimizer=keras.optimizers.Adam(learning_rate=1e-5),
-                              loss_fn=penalized_mean_squared_error,
-                              validation_monitoring_metric='pearson',
-                              max_epoch=100,
-                              min_epoch=10,
-                              gradual_unfreezing_flag=True,
-                              unfrozen_epoch=5
-                              ):
+                          target_df,
+                          validation_X=None,
+                          validation_target_df=None,
+                          mlp_architecture=None,
+                          mlp_output_act_fn=keras.activations.sigmoid,
+                          mlp_output_dim=1,
+                          optimizer=keras.optimizers.Adam(learning_rate=1e-5),
+                          loss_fn=penalized_mean_squared_error,
+                          validation_monitoring_metric='pearson',
+                          max_epoch=100,
+                          min_epoch=10,
+                          gradual_unfreezing_flag=True,
+                          unfrozen_epoch=5
+                          ):
     if mlp_architecture is None:
         mlp_architecture = [64, 32]
 
@@ -115,7 +115,7 @@ def fine_tune_gex_encoder(encoder, raw_X,
     safe_make_dir(output_folder)
 
     gex_supervisor_dict = dict()
-    best_overall_metric = 0.
+    best_overall_metric = float('-inf')
 
     training_history = {
         'train_pearson': defaultdict(list),
@@ -166,8 +166,8 @@ def fine_tune_gex_encoder(encoder, raw_X,
                     if free_layers <= 0:
                         gradual_unfreezing_flag = False
                         encoder.trainable = True
-
-            for drug in target_df.columns[:10]:
+            tape.watch(to_train_variables)
+            for drug in target_df.columns:
                 # model = keras.Sequential()
                 # model.add(encoder)
                 # model.add(gex_supervisor_dict[drug])
@@ -287,6 +287,8 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
 
     best_val_loss = float('inf')
     tolerance_count = 0
+    reference_encoder.trainable = False
+
 
     for epoch in range(max_epochs):
         total_train_loss = 0.
@@ -357,22 +359,22 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
 
 
 def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
-                              target_df,
-                              transmission_loss_fn,
-                              alpha=1.,
-                              validation_X=None,
-                              validation_target_df=None,
-                              mlp_architecture=None,
-                              mlp_output_act_fn=keras.activations.sigmoid,
-                              mlp_output_dim=1,
-                              optimizer=keras.optimizers.Adam(learning_rate=1e-5),
-                              loss_fn=penalized_mean_squared_error,
-                              validation_monitoring_metric='pearson',
-                              max_epoch=100,
-                              min_epoch=10,
-                              gradual_unfreezing_flag=True,
-                              unfrozen_epoch=5
-                              ):
+                          target_df,
+                          transmission_loss_fn,
+                          alpha=1.,
+                          validation_X=None,
+                          validation_target_df=None,
+                          mlp_architecture=None,
+                          mlp_output_act_fn=keras.activations.sigmoid,
+                          mlp_output_dim=1,
+                          optimizer=keras.optimizers.Adam(learning_rate=1e-5),
+                          loss_fn=penalized_mean_squared_error,
+                          validation_monitoring_metric='pearson',
+                          max_epoch=100,
+                          min_epoch=10,
+                          gradual_unfreezing_flag=True,
+                          unfrozen_epoch=5
+                          ):
     if mlp_architecture is None:
         mlp_architecture = [64, 32]
 
@@ -381,7 +383,7 @@ def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
     safe_make_dir(output_folder)
 
     mut_supervisor_dict = dict()
-    best_overall_metric = 0.
+    best_overall_metric = float('-inf')
 
     training_history = {
         'train_pearson': defaultdict(list),
@@ -399,6 +401,7 @@ def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
         'val_total': defaultdict(list)
     }
     free_layers = len(encoder.layers)
+    reference_encoder.trainable = False
 
     if gradual_unfreezing_flag:
         encoder.trainable = False
@@ -432,8 +435,9 @@ def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
                     if free_layers <= 0:
                         gradual_unfreezing_flag = False
                         encoder.trainable = True
+            tape.watch(to_train_variables)
 
-            for drug in target_df.columns[:10]:
+            for drug in target_df.columns:
                 # model = keras.Sequential()
                 # model.add(encoder)
                 # model.add(gex_supervisor_dict[drug])
@@ -567,6 +571,8 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
 
     best_val_loss = float('inf')
     tolerance_count = 0
+    reference_encoder.trainable = False
+
 
     gp_optimizer = keras.optimizers.RMSprop()
 
@@ -599,7 +605,7 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
                 with tf.GradientTape() as sub_tape:
                     sub_tape.watch(x_hat)
                     critic_hat = critic(x_hat)
-                    gp_vec = tape.gradient(critic_hat, x_hat)
+                    gp_vec = sub_tape.gradient(critic_hat, x_hat)
 
                 grad_penalty = tf.reduce_mean((tf.norm(gp_vec, axis=1) - 1.0) ** 2, axis=0)
                 loss_value = critic_loss + 10. * grad_penalty
@@ -608,14 +614,16 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
                 gp_optimizer.apply_gradients(zip(grads, critic.trainable_variables))
 
             if (epoch + 1) % n_critic == 0:
-                preds = auto_encoder(x_batch_train, training=True)
-                loss_value = loss_fn(y_batch_train, preds)
-                loss_value -= alpha * critic_fake
-                loss_value += sum(auto_encoder.losses)
-                total_train_gen_loss -= critic_fake
+                with tf.GradientTape() as tape:
+                    preds = auto_encoder(x_batch_train, training=True)
+                    loss_value = loss_fn(y_batch_train, preds)
+                    loss_value -= alpha * tf.reduce_mean(critic_fake, axis=0)
+                    loss_value += sum(auto_encoder.losses)
+                    total_train_gen_loss -= tf.reduce_mean(critic_fake, axis=0)
 
-                grads = tape.gradient(loss_value, auto_encoder.trainable_variables)
-                optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables))
+                    grads = tape.gradient(loss_value, auto_encoder.trainable_variables)
+                    optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables))
+
             if (step + 1) % 100 == 0:
                 print('Training loss (for one batch) at step %s: %s' % (step + 1, float(loss_value)))
                 print('Seen so far: %s samples' % ((step + 1) * batch_size))
@@ -640,7 +648,7 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
             # val_loss_value -= alpha * critic_val_fake
             total_val_loss += critic_val_loss
             if (epoch + 1) % n_critic == 0:
-                total_val_gen_loss -= critic_fake
+                total_val_gen_loss -= tf.reduce_mean(critic_val_fake, axis=0)
         val_loss_history.append(total_val_loss.numpy() / float(total_val_steps))
         if (epoch + 1) % n_critic == 0:
             val_gen_loss_history.append(total_val_gen_loss.numpy() / float(total_val_steps))
@@ -672,20 +680,20 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
 
 
 def fine_tune_mut_encoder_with_GAN(encoder, raw_X,
-                                       target_df,
-                                       validation_X=None,
-                                       validation_target_df=None,
-                                       mlp_architecture=None,
-                                       mlp_output_act_fn=keras.activations.sigmoid,
-                                       mlp_output_dim=1,
-                                       optimizer=keras.optimizers.Adam(learning_rate=1e-5),
-                                       loss_fn=penalized_mean_squared_error,
-                                       validation_monitoring_metric='pearson',
-                                       max_epoch=100,
-                                       min_epoch=10,
-                                       gradual_unfreezing_flag=True,
-                                       unfrozen_epoch=5
-                                       ):
+                                   target_df,
+                                   validation_X=None,
+                                   validation_target_df=None,
+                                   mlp_architecture=None,
+                                   mlp_output_act_fn=keras.activations.sigmoid,
+                                   mlp_output_dim=1,
+                                   optimizer=keras.optimizers.Adam(learning_rate=1e-5),
+                                   loss_fn=penalized_mean_squared_error,
+                                   validation_monitoring_metric='pearson',
+                                   max_epoch=100,
+                                   min_epoch=10,
+                                   gradual_unfreezing_flag=True,
+                                   unfrozen_epoch=5
+                                   ):
     if mlp_architecture is None:
         mlp_architecture = [64, 32]
 
@@ -694,7 +702,7 @@ def fine_tune_mut_encoder_with_GAN(encoder, raw_X,
     safe_make_dir(output_folder)
 
     mut_supervisor_dict = dict()
-    best_overall_metric = 0.
+    best_overall_metric = float('-inf')
 
     training_history = {
         'train_pearson': defaultdict(list),
@@ -747,7 +755,7 @@ def fine_tune_mut_encoder_with_GAN(encoder, raw_X,
                         gradual_unfreezing_flag = False
                         encoder.trainable = True
 
-            for drug in target_df.columns[:10]:
+            for drug in target_df.columns:
                 # model = keras.Sequential()
                 # model.add(encoder)
                 # model.add(mut_supervisor_dict[drug])

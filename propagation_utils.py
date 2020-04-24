@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from pyNBS import data_import_tools as dit
 from pyNBS import network_propagation as prop
-
+import gzip
 
 def preprocess_network_file(raw_network_file_path=data_config.raw_string_network_file,
                             mapping_file_path=data_config.string_id_mapping_file,
