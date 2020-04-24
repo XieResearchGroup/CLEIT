@@ -23,7 +23,7 @@ def process_with_rf(train_features, y_train, cv_split_rf):
         # mx_depth: trees' maximum depth
         # n_estimators: number of trees to use
         # n_jobs = -1 means to run the jobs in parallel
-        rf_tuning_parameters = [{'n_estimators': [10, 50, 100, 500], 'max_depth': [10, 20, 50, 100]}]
+        rf_tuning_parameters = [{'n_estimators': [10, 100, 500], 'max_depth': [10, 50, 100]}]
         #rf_tuning_parameters = [{'n_estimators': [5], 'max_depth': [10]}]
         rf = GridSearchCV(RandomForestRegressor(min_samples_split=10), rf_tuning_parameters, n_jobs=-1, cv=cv_split_rf,
                           verbose=2)
@@ -54,8 +54,8 @@ def process_with_enet(train_features, y_train, cv_split_enet):
 def process_with_xgb(train_features, y_train, cv_split_xgb):
     try:
         xgb_tuning_parameters = {
-            'learning_rate': [0.01, 0.05, 0.1, 0.5, 0.9],
-            'n_estimators': {50, 100, 200, 500},
+            'learning_rate': [0.01, 0.5, 0.9],
+            'n_estimators': {50, 100, 500},
             'subsample': [0.3, 0.5, 0.9]
         }
         gbm = GridSearchCV(estimator=xgb.XGBRegressor(),
@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
             y_train, y_test = y[train_index], y[test_index]
 
-            kfold = KFold(n_splits=5, shuffle=True, random_state=2020)
+            kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
             cv_split = kfold.split(X)
             try:
                 print('Overlapped Training')
@@ -140,7 +140,7 @@ if __name__ == '__main__':
             except Exception as e:
                 print(e)
 
-            kfold = KFold(n_splits=5, shuffle=True, random_state=2020)
+            kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
             cv_split = kfold.split(X_gex)
             try:
                 print('Gex Training')
@@ -150,7 +150,7 @@ if __name__ == '__main__':
             except Exception as e:
                 print(e)
 
-            kfold = KFold(n_splits=5, shuffle=True, random_state=2020)
+            kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
             cv_split = kfold.split(X_mut)
             try:
                 print('Mutation Training')
