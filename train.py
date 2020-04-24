@@ -93,7 +93,7 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
     })
 
 
-def fine_tune_gex_autoencoder(encoder, raw_X,
+def fine_tune_gex_encoder(encoder, raw_X,
                               target_df,
                               validation_X=None,
                               validation_target_df=None,
@@ -355,7 +355,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
     })
 
 
-def fine_tune_mut_autoencoder(encoder, reference_encoder, raw_X, raw_reference_X,
+def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
                               target_df,
                               transmission_loss_fn,
                               alpha=1.,
@@ -667,7 +667,7 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
     })
 
 
-def fine_tune_mut_autoencoder_with_GAN(encoder, raw_X,
+def fine_tune_mut_encoder_with_GAN(encoder, raw_X,
                                        target_df,
                                        validation_X=None,
                                        validation_target_df=None,

@@ -34,9 +34,9 @@ if __name__ == '__main__':
     ccle_gex_dat = preprocess_ccle_gdsc_utils.preprocess_ccle_gex_df(file_path=data_config.ccle_gex_file)
     xena_gex_dat, ccle_gex_dat = align_feature(xena_gex_dat, ccle_gex_dat)
 
-    xena_mut_dat = preprocess_xena_utils.preprocess_mut(propagation_flag=args.propagation, data_config.xena_mut_file)
+    xena_mut_dat = preprocess_xena_utils.preprocess_mut(propagation_flag=args.propagation, mutation_dat_file=data_config.xena_mut_file)
     ccle_mut_dat = preprocess_ccle_gdsc_utils.preprocess_ccle_mut(propagation_flag=args.propagation,
-                                                                  data_config.ccle_mut_file)
+                                                                  mutation_dat_file=data_config.ccle_mut_file)
     xena_mut_dat, ccle_mut_dat = align_feature(xena_mut_dat, ccle_mut_dat)
 
     labeled_mut_file_name = 'labeled_mut'
