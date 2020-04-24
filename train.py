@@ -319,6 +319,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
         train_loss_history.append(total_train_loss.numpy() / float(total_train_steps))
 
         for step, (x_batch_val, y_batch_val, reference_x_batch_val) in enumerate(val_dataset):
+            total_val_steps += 1
             if repr(auto_encoder.encoder).startswith('stochastic'):
                 encoded_X_val = auto_encoder.encoder(x_batch_val, training=False)[0]
                 reference_encoded_x_val = reference_encoder(reference_x_batch_val, training=False)[0]
@@ -567,6 +568,8 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
     best_val_loss = float('inf')
     tolerance_count = 0
 
+    gp_optimizer = keras.optimizers.RMSprop()
+
     for epoch in range(max_epochs * n_critic):
         total_train_loss = 0.
         total_train_gen_loss = 0.
@@ -602,7 +605,7 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
                 loss_value = critic_loss + 10. * grad_penalty
                 loss_value += sum(critic.losses)
                 grads = tape.gradient(loss_value, critic.trainable_variables)
-                optimizer.apply_gradients(zip(grads, critic.trainable_variables))
+                gp_optimizer.apply_gradients(zip(grads, critic.trainable_variables))
 
             if (epoch + 1) % n_critic == 0:
                 preds = auto_encoder(x_batch_train, training=True)
@@ -621,6 +624,7 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
             train_gen_loss_history.append(total_train_gen_loss.numpy() / float(total_train_steps))
 
         for step, (x_batch_val, y_batch_val, reference_x_batch_val) in enumerate(val_dataset):
+            total_val_steps += 1
             if repr(auto_encoder.encoder).startswith('stochastic'):
                 encoded_X_val = auto_encoder.encoder(x_batch_val, training=False)[0]
                 reference_encoded_x_val = reference_encoder(reference_x_batch_val, training=False)[0]
