@@ -36,13 +36,13 @@ class EncoderBlock(keras.Model):
 
 
 class MLPBlock(keras.Model):
-    def __init__(self, output_dim, architecture, output_act_fn=None, name='mlp', **kwargs):
+    def __init__(self, output_dim, architecture, act_fn='relu', output_act_fn=None, name='mlp', **kwargs):
         super(MLPBlock, self).__init__(name=name, **kwargs)
         self.intermediate_layers = []
         self.architecture = architecture
         self.output_dim = output_dim
         for dim in architecture:
-            self.intermediate_layers.append(DenseLayer(units=dim))
+            self.intermediate_layers.append(DenseLayer(units=dim, activation=act_fn))
         self.output_layer = keras.layers.Dense(output_dim, activation=output_act_fn)
 
     def __repr__(self):
@@ -55,6 +55,30 @@ class MLPBlock(keras.Model):
         #    self.output_layer.trainable = training
         result = self.output_layer(inputs)
         return result
+
+
+
+class Critic(keras.Model):
+    def __init__(self, output_dim, architecture, act_fn='leaky_relu', output_act_fn=None, name='critic', **kwargs):
+        super(Critic, self).__init__(name=name, **kwargs)
+        self.intermediate_layers = []
+        self.architecture = architecture
+        self.output_dim = output_dim
+        for dim in architecture:
+            self.intermediate_layers.append(LayerNormLayer(units=dim, activation=act_fn))
+        self.output_layer = keras.layers.Dense(output_dim, activation=output_act_fn)
+
+    def __repr__(self):
+        return utils.list_to_repr(self.architecture) + repr(self.output_dim)
+
+    def call(self, inputs, training=True, **kwargs):
+        for layer in self.intermediate_layers:
+            inputs = layer(inputs, training=training)
+        # if training is not None:
+        #    self.output_layer.trainable = training
+        result = self.output_layer(inputs)
+        return result
+
 
 
 class AE(keras.Model):
