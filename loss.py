@@ -32,8 +32,8 @@ def compute_cosine_distances_matrix(x, y):
     # y shape is n_b * dim
     # results shape is n_a * n_b
     normalize_x = tf.nn.l2_normalize(x, 1)
-    normalize_x = tf.nn.l2_normalize(y, 1)
-    sim_matrix = tf.matmul(normalize_x, normalize_x, transpose_b=True)
+    normalize_y = tf.nn.l2_normalize(y, 1)
+    sim_matrix = tf.matmul(normalize_x, normalize_y, transpose_b=True)
     return sim_matrix
 
 def contrastive_loss(y_true, y_pred):
