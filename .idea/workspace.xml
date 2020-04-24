@@ -1,25 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AnalysisUIOptions">
+    <option name="SCOPE_TYPE" value="3" />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="24740e00-0746-4525-a150-b7e4a54c424b" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/data.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/data_config.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/evaluate.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/functional.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/layer.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/loss.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ml_baseline.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/model_config.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/module.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/preprocess_ccle_gdsc_utils.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/preprocess_xena_utils.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/preprocessing.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/propagation_utils.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/run.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/train.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/future_train.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data.py" beforeDir="false" afterPath="$PROJECT_DIR$/data.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/layer.py" beforeDir="false" afterPath="$PROJECT_DIR$/layer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/loss.py" beforeDir="false" afterPath="$PROJECT_DIR$/loss.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/module.py" beforeDir="false" afterPath="$PROJECT_DIR$/module.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/test.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/train.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -51,25 +44,17 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="IgnoredFileRootStore">
-    <option name="generatedRoots">
-      <set>
-        <option value="$PROJECT_DIR$/.idea" />
-      </set>
-    </option>
-  </component>
   <component name="JupyterTrust" id="d35d06f7-a80e-4c2e-a5a4-ed52bf55ef0e" />
   <component name="ProjectId" id="1UDgtAlM8RAUwAQbnrsWPvdTS9Z" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
-    <option name="showExcludedFiles" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">
     <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
-    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="run.code.analysis.last.selected.profile" value="aDefault" />
     <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
   </component>
   <component name="RecentsManager">
@@ -100,18 +85,6 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-  </component>
-  <component name="ServiceViewManager">
-    <option name="viewStates">
-      <list>
-        <serviceView>
-          <treeState>
-            <expand />
-            <select />
-          </treeState>
-        </serviceView>
-      </list>
-    </option>
   </component>
   <component name="SvnConfiguration">
     <configuration />
@@ -156,30 +129,43 @@
       <workItem from="1585515267468" duration="12100000" />
       <workItem from="1586557187893" duration="1408000" />
       <workItem from="1586582355907" duration="11582000" />
+      <workItem from="1586752406203" duration="1234000" />
+      <workItem from="1587110830292" duration="319000" />
+      <workItem from="1587664838217" duration="29000" />
+      <workItem from="1587664918789" duration="27087000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
-    <option name="version" value="1" />
+    <option name="version" value="2" />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">
       <map>
         <entry key="MAIN">
           <value>
-            <State>
-              <option name="COLUMN_ORDER" />
-            </State>
+            <State />
           </value>
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="328" y="143" key="#com.intellij.openapi.updateSettings.impl.PluginUpdateInfoDialog" timestamp="1585258601120">
+    <state x="328" y="143" key="#com.intellij.openapi.updateSettings.impl.PluginUpdateInfoDialog" timestamp="1587664846863">
       <screen x="0" y="0" width="1280" height="800" />
     </state>
+    <state x="328" y="143" key="#com.intellij.openapi.updateSettings.impl.PluginUpdateInfoDialog/0.0.1280.800/-2560.0.2560.1440@0.0.1280.800" timestamp="1587664846863" />
     <state x="328" y="143" key="#com.intellij.openapi.updateSettings.impl.PluginUpdateInfoDialog/0.0.1280.800@0.0.1280.800" timestamp="1585258601120" />
+    <state x="-1529" y="582" key="ANALYSIS_DLG_com.intellij.analysis.BaseAnalysisAction$1" timestamp="1587691312928">
+      <screen x="-2560" y="0" width="2560" height="1440" />
+    </state>
+    <state x="-1529" y="582" key="ANALYSIS_DLG_com.intellij.analysis.BaseAnalysisAction$1/0.0.1280.800/-2560.0.2560.1440@-2560.0.2560.1440" timestamp="1587685897006" />
+    <state x="-1529" y="582" key="ANALYSIS_DLG_com.intellij.analysis.BaseAnalysisAction$1/0.23.1280.777/-2560.0.2560.1440@-2560.0.2560.1440" timestamp="1587691312928" />
+    <state x="-1427" y="641" key="VCS.ChangelistChooser" timestamp="1587690300242">
+      <screen x="-2560" y="0" width="2560" height="1440" />
+    </state>
+    <state x="-1427" y="641" key="VCS.ChangelistChooser/0.0.1280.800/-2560.0.2560.1440@-2560.0.2560.1440" timestamp="1587690300242" />
     <state x="240" y="140" key="Vcs.Push.Dialog.v2" timestamp="1586723217042">
       <screen x="0" y="0" width="1280" height="800" />
     </state>
@@ -188,11 +174,16 @@
       <screen x="0" y="23" width="1280" height="734" />
     </state>
     <state x="100" y="100" width="1080" height="600" key="com.intellij.dvcs.ui.CompareBranchesDialog/0.23.1280.734/-2560.23.2560.1417@0.23.1280.734" timestamp="1586723245742" />
-    <state x="317" y="222" key="com.intellij.ide.util.TipDialog" timestamp="1586557188599">
+    <state x="317" y="222" key="com.intellij.ide.util.TipDialog" timestamp="1587664837710">
       <screen x="0" y="0" width="1280" height="800" />
     </state>
+    <state x="317" y="222" key="com.intellij.ide.util.TipDialog/0.0.1280.800/-2560.0.2560.1440@0.0.1280.800" timestamp="1587664837710" />
     <state x="317" y="222" key="com.intellij.ide.util.TipDialog/0.0.1280.800@0.0.1280.800" timestamp="1586557188599" />
     <state x="317" y="222" key="com.intellij.ide.util.TipDialog/0.23.1280.734@0.23.1280.734" timestamp="1585515267773" />
+    <state x="-1433" y="518" key="refactoring.ChangeSignatureDialog" timestamp="1587674935147">
+      <screen x="-2560" y="0" width="2560" height="1440" />
+    </state>
+    <state x="-1433" y="518" key="refactoring.ChangeSignatureDialog/0.23.1280.777/-2560.0.2560.1440@-2560.0.2560.1440" timestamp="1587674935147" />
     <state x="305" y="124" width="670" height="676" key="search.everywhere.popup" timestamp="1586666179088">
       <screen x="0" y="0" width="1280" height="800" />
     </state>

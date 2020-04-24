@@ -1,7 +1,5 @@
-import tensorflow as tf
-from tensorflow import keras
-from layer import *
 import utils
+from layer import *
 
 
 class EncoderBlock(keras.Model):
@@ -18,9 +16,11 @@ class EncoderBlock(keras.Model):
             self.extra_output_layer = keras.layers.Dense(latent_dim, activation=output_act_fn)
 
     def __repr__(self):
+        if self.stochastic_flag:
+            return 'stochastic_'+utils.list_to_repr(self.architecture) + repr(self.latent_dim)
         return utils.list_to_repr(self.architecture) + repr(self.latent_dim)
 
-    def call(self, inputs, training=True):
+    def call(self, inputs, training=True, **kwargs):
         for layer in self.intermediate_layers:
             inputs = layer(inputs, training=training)
         # if training is not None:
@@ -28,8 +28,9 @@ class EncoderBlock(keras.Model):
         latent_code = self.output_layer(inputs)
         if self.stochastic_flag:
             # if training is not None:
-            #    self.extra_latent_code.trainable = training
+            #    self.extra_output_layer.trainable = training
             extra_latent_code = self.extra_output_layer(inputs)
+            #latent_code = SamplingLayer()(((latent_code, extra_latent_code)))
             return latent_code, extra_latent_code
         return latent_code
 
@@ -47,7 +48,7 @@ class MLPBlock(keras.Model):
     def __repr__(self):
         return utils.list_to_repr(self.architecture) + repr(self.output_dim)
 
-    def call(self, inputs, training=True):
+    def call(self, inputs, training=True, **kwargs):
         for layer in self.intermediate_layers:
             inputs = layer(inputs, training=training)
         # if training is not None:
@@ -65,7 +66,7 @@ class AE(keras.Model):
         self.decoder = MLPBlock(output_dim=output_dim, architecture=architecture[::-1], output_act_fn=output_act_fn,
                                 name='decoder')
 
-    def call(self, inputs, training=True):
+    def call(self, inputs, training=True, **kwargs):
         if training is True:
             inputs = self.noise_layer(inputs, training=training)
         latent_code = self.encoder(inputs, training=training)
@@ -84,11 +85,12 @@ class VAE(keras.Model):
         self.decoder = MLPBlock(output_dim=output_dim, architecture=architecture[::-1], output_act_fn=output_act_fn,
                                 name='decoder')
 
-    def call(self, inputs, training=True):
+    def call(self, inputs, training=True, **kwargs):
         # if training is True:
         #    inputs = self.noise_layer(inputs, training=training)
         latent_mean, latent_log_var = self.encoder(inputs, training=training)
         latent_code = SamplingLayer()(((latent_mean, latent_log_var)))
+        #latent_code = self.encoder(inputs, training=training)
         output = self.decoder(latent_code, training=training)
 
         kl_loss = -0.5 * tf.reduce_sum(

@@ -151,3 +151,9 @@ class DataProvider:
             matched_index = matched_index.intersection(self.unlabeled_data[omic].index)
         return matched_index
 
+    def get_k_folds(self, k=5):
+        kfold = KFold(n_splits=k, shuffle=True, random_state=self.random_seed)
+        cv_splits = list(kfold.split(self.labeled_data['target']))
+        return cv_splits
+
+
