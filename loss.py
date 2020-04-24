@@ -28,9 +28,6 @@ def spearman_correlation(y_true, y_pred):
     return pearson_correlation(y_pred=tf.cast(predictions_rank, 'float32'), y_true=tf.cast(truth_rank, 'float32'))
 
 def compute_cosine_distances_matrix(x, y):
-    # x shape is n_a * dim
-    # y shape is n_b * dim
-    # results shape is n_a * n_b
     normalize_x = tf.nn.l2_normalize(x, 1)
     normalize_y = tf.nn.l2_normalize(y, 1)
     sim_matrix = tf.matmul(normalize_x, normalize_y, transpose_b=True)
