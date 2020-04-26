@@ -47,11 +47,33 @@ def preprocess_gdsc_target_dat(gdsc1_file=data_config.gdsc_target_file1, gdsc2_f
 
 
 def preprocess_target_data(score='AUC', output_file_path=None):
-    raw_target_df = preprocess_gdsc_target_dat(score=score, output_file_path=data_config.gdsc_target_file)
-    sample_list = list(get_normalized_ccle_sample_dict().values())
-    target_df = raw_target_df.pivot_table(index=['CELL_LINE_NAME'], columns='DRUG_NAME', values=score)
-    target_df = target_df[target_df.index.isin(sample_list)]
+    # raw_target_df = preprocess_gdsc_target_dat(score=score, output_file_path=data_config.gdsc_target_file)
+    # sample_list = list(get_normalized_ccle_sample_dict().values())
+    # target_df = raw_target_df.pivot_table(index=['CELL_LINE_NAME'], columns='DRUG_NAME', values=score)
+    # target_df = target_df[target_df.index.isin(sample_list)]
 
+    #keep only tcga classified samples
+
+    ccle_sample_info = pd.read_csv(data_config.ccle_sample_file, index_col=4)
+    ccle_sample_info.index = ccle_sample_info.index.astype(pd.Int32Dtype())
+
+    gdsc_sample_info = pd.read_csv(data_config.gdsc_sample_file, header=0, index_col=1)
+    gdsc_sample_info.index = gdsc_sample_info.index.astype(pd.Int32Dtype())
+    gdsc_sample_info = gdsc_sample_info.loc[gdsc_sample_info.index.dropna()]
+    gdsc_sample_info = gdsc_sample_info.loc[gdsc_sample_info.iloc[:, 8].dropna().index]
+
+    gdsc_sample_mapping = gdsc_sample_info.merge(ccle_sample_info, left_index=True, right_index=True, how='inner')[
+        ['Sample Name', 'DepMap_ID']]
+
+    gdsc_sample_mapping.reset_index(inplace=True)
+    gdsc_sample_mapping.set_index('Sample Name', inplace=True)
+    gdsc_sample_mapping_dict = gdsc_sample_mapping.to_dict()['DepMap_ID']
+
+    gdsc_drug_sensitivity = pd.read_csv(data_config.gdsc_target_file, skiprows=4, index_col=1)
+    gdsc_drug_sensitivity.drop(axis=1, columns=[gdsc_drug_sensitivity.columns[0]], inplace=True)
+    gdsc_drug_sensitivity.index = gdsc_drug_sensitivity.index.map(gdsc_sample_mapping_dict)
+    target_df = gdsc_drug_sensitivity.loc[gdsc_drug_sensitivity.index.dropna()]
+    target_df = target_df.astype('float32')
     if output_file_path:
         target_df.to_csv(output_file_path + '.csv', index_label='Sample')
     return target_df
@@ -59,24 +81,29 @@ def preprocess_target_data(score='AUC', output_file_path=None):
 
 def preprocess_ccle_gex_df(file_path=data_config.ccle_gex_file,
                            output_file_path=None):
-    with gzip.open(filename=file_path) as f:
-        df = pd.read_csv(f, sep='\t')
-    df.drop(columns=['transcript_ids'], inplace=True)
-    # could be done with pandas read, dtype converters
-    df.gene_id = df.gene_id.apply(lambda s: s[:s.find('.')])
-    df.set_index('gene_id', inplace=True)
-    df = df.transpose()
-    df.index.name = 'Sample'
-    df = df.loc[:, df.mean() != 0]
-    df = np.log2(df + 0.001)
-    normalized_name_dict = {name: name for name in df.index}
-    normalized_name_dict.update(get_normalized_ccle_sample_dict())
-    df.index = df.index.map(normalized_name_dict)
+    df = pd.read_csv(file_path, index_col=0)
+    #get hgnc
+    df.columns = df.columns.to_series().apply(lambda s: s[:s.find('(') - 1])
+
+    # with gzip.open(filename=file_path) as f:
+    #     df = pd.read_csv(f, sep='\t')
+    # df.drop(columns=['transcript_ids'], inplace=True)
+    # # could be done with pandas read, dtype converters
+    # df.gene_id = df.gene_id.apply(lambda s: s[:s.find('.')])
+    # df.set_index('gene_id', inplace=True)
+    # df = df.transpose()
+    # df.index.name = 'Sample'
+    # df = df.loc[:, df.mean() != 0]
+    # df = np.log2(df + 0.001)
+    # normalized_name_dict = {name: name for name in df.index}
+    # normalized_name_dict.update(get_normalized_ccle_sample_dict())
+    # df.index = df.index.map(normalized_name_dict)
     # if feature_list:
     #     genes_to_keep = list(set(df.columns.tolist()) & set(feature_list))
     #     df = df[genes_to_keep]
     #     if output_file_path:
     #         output_file_path = output_file_path + '_filtered'
+    df = df.astype('float32')
     print('Preprocessed data has {0} samples and {1} features'.format(df.shape[0], df.shape[1]))
     if output_file_path:
         df.to_csv(output_file_path + '.csv', index_label='Sample')
@@ -98,13 +125,22 @@ def getBinaryMat(df, sample_id='Tumor_Sample_Barcode', feature_id='Hugo_Symbol')
 
 
 def load_ccle_muation_df(file_path=data_config.ccle_mut_file, filtered_variant=['Silent'], network_id_file=None):
-    mutation_df = pd.read_csv(file_path, header=0, sep='\t')
+    #mutation_df = pd.read_csv(file_path, header=0, sep='\t')
+    #mutation_df = mutation_df[~ mutation_df.Variant_Classification.isin(filtered_variant)]
+    #binary_mutation_df = getBinaryMat(mutation_df)
+    #normalized_name_dict = {name: name for name in binary_mutation_df.index}
+    #normalized_name_dict.update(get_normalized_ccle_sample_dict())
+    #binary_mutation_df.index = binary_mutation_df.index.map(normalized_name_dict)
+
+    mutation_df = pd.read_csv(file_path, index_col=1)[['DepMap_ID', 'Variant_Classification']]
     mutation_df = mutation_df[~ mutation_df.Variant_Classification.isin(filtered_variant)]
 
-    binary_mutation_df = getBinaryMat(mutation_df)
-    normalized_name_dict = {name: name for name in binary_mutation_df.index}
-    normalized_name_dict.update(get_normalized_ccle_sample_dict())
-    binary_mutation_df.index = binary_mutation_df.index.map(normalized_name_dict)
+    mutation_df.drop(columns=['Variant_Classification'], inplace=True)
+    mutation_df['Score'] = 1
+
+    binary_mutation_df = pd.pivot_table(data=mutation_df, columns='Hugo_Symbol', index='DepMap_ID', values='Score', fill_value=0,
+                         aggfunc=max)
+
     if network_id_file:
         with gzip.open(network_id_file) as f:
             mapping_df = pd.read_csv(f, sep='\t', index_col=0)
@@ -142,6 +178,7 @@ def preprocess_ccle_mut(propagation_flag=True, mutation_dat_file=data_config.ccl
                 to_drop.append(sample_id)
         if len(to_drop) > 0:
             propagation_result.drop(to_drop, inplace=True)
+        propagation_result = propagation_result.astype('float32')
         if output_file_path:
             print('Preprocessed data has {0} samples and {1} features'.format(propagation_result.shape[0],
                                                                               propagation_result.shape[1]))

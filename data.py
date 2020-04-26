@@ -6,6 +6,7 @@ import random
 import pandas as pd
 import data_config
 import preprocess_ccle_gdsc_utils
+import preprocess_xena_utils
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.model_selection import KFold
 
@@ -63,49 +64,65 @@ def align_feature(df1, df2):
 
 
 class DataProvider:
-    def __init__(self, feature_filter_fn=None, feature_number=5000, propagation=True, target='AUC', scale_fn=None,
+    def __init__(self, feature_filter=None, feature_number=5000, propagation=True, target='AUC', scale_fn=None,
                  omics=None,
                  random_seed=2019):
         self.omics = omics
         self.random_seed = random_seed
-        self.feature_filter_fn = feature_filter_fn
+        self.feature_filter = feature_filter
         self.feature_number = feature_number
         self.propagation = propagation
         self.target = target
         self.scale_fn = scale_fn
-        self.labeled_data, self.unlabeled_data = self._load_data()
+        self.labeled_data, self.unlabeled_data, self.labeled_test_data = self._load_data()
         self.shape_dict = self._get_shape_dict()
         self.matched_index = self._get_matched_index()
 
     def _load_data(self):
         xena_gex_dat = pd.read_csv(data_config.xena_preprocessed_gex_file + '.csv', index_col=0)
-        gex_dat = preprocess_ccle_gdsc_utils.preprocess_ccle_gex_df(file_path=data_config.ccle_gex_file)
-        xena_gex_dat, gex_dat = align_feature(xena_gex_dat, gex_dat)
         if self.propagation:
             xena_mut_dat = pd.read_csv(data_config.xena_preprocessed_mut_file + '_propagated.csv', index_col=0)
         else:
             xena_mut_dat = pd.read_csv(data_config.xena_preprocessed_mut_file + '.csv', index_col=0)
-
+        gex_dat = preprocess_ccle_gdsc_utils.preprocess_ccle_gex_df(file_path=data_config.ccle_gex_file)
         mut_dat = preprocess_ccle_gdsc_utils.preprocess_ccle_mut(propagation_flag=self.propagation,
                                                                  mutation_dat_file=data_config.ccle_mut_file)
-        xena_mut_dat, mut_dat = align_feature(xena_mut_dat, mut_dat)
-        if self.feature_filter_fn:
-            xena_gex_dat = self.feature_filter_fn(xena_gex_dat, k=self.feature_number)
+        if self.feature_filter == 'MAD':
             xena_gex_dat, gex_dat = align_feature(xena_gex_dat, gex_dat)
-            xena_mut_dat = self.feature_filter_fn(xena_mut_dat, k=self.feature_number)
+            xena_mut_dat, mut_dat = align_feature(xena_mut_dat, mut_dat)
+            xena_gex_dat = preprocess_xena_utils.preprocess_gex_df(df=xena_gex_dat, MAD=True,
+                                                                   feature_num=self.feature_number)
+            xena_gex_dat, gex_dat = align_feature(xena_gex_dat, gex_dat)
+            xena_mut_dat = preprocess_xena_utils.filter_with_MAD(xena_mut_dat, k=self.feature_number)
             xena_mut_dat, mut_dat = align_feature(xena_mut_dat, mut_dat)
 
-        target_dat = preprocess_ccle_gdsc_utils.preprocess_target_data(score=self.target)
+        elif self.feature_filter is not None:
+            feature_list = pd.read_csv(data_config.gene_feature_file, sep='\t', header=None).iloc[:, 0].to_list()
+            xena_gex_dat = preprocess_xena_utils.preprocess_gex_df(df=xena_gex_dat, feature_list=feature_list)
+            xena_gex_dat, gex_dat = align_feature(xena_gex_dat, gex_dat)
+            mut_genes_to_keep = list(set(xena_mut_dat.columns.tolist()) & set(feature_list))
+            xena_mut_dat = xena_mut_dat[mut_genes_to_keep]
+            xena_mut_dat, mut_dat = align_feature(xena_mut_dat, mut_dat)
+        else:
+            xena_gex_dat, gex_dat = align_feature(xena_gex_dat, gex_dat)
+            xena_mut_dat, mut_dat = align_feature(xena_mut_dat, mut_dat)
+
+        target_dat = preprocess_ccle_gdsc_utils.preprocess_target_data()
+
         target_samples = list(
             set(gex_dat.index.to_list()) & set(mut_dat.index.to_list()) & set(target_dat.index.to_list()))
+        mut_only_target_samples = list(
+            set(mut_dat.index.to_list()) & set(target_dat.index.to_list()) - set(gex_dat.index.to_list()))
 
         labeled_gex_dat = gex_dat.loc[target_samples, :]
         labeled_mut_dat = mut_dat.loc[target_samples, :]
+        labeled_mut_only_dat = mut_dat.loc[mut_only_target_samples,:]
         labeled_targets_dat = target_dat.loc[target_samples, :]
+        labeled_mut_only_target_dat = target_dat.loc[mut_only_target_samples, :]
         unlabeled_gex_dat = pd.concat(
-            [xena_gex_dat, gex_dat.loc[~gex_dat.index.isin(target_samples), :]])
+            [xena_gex_dat, gex_dat.loc[~gex_dat.index.isin(target_samples+mut_only_target_samples), :]])
         unlabeled_mut_dat = pd.concat(
-            [xena_mut_dat, mut_dat.loc[~mut_dat.index.isin(target_samples), :]])
+            [xena_mut_dat, mut_dat.loc[~mut_dat.index.isin(target_samples+mut_only_target_samples), :]])
 
         if self.scale_fn:
             self.gex_scaler = min_max_scale(xena_gex_dat)
@@ -117,16 +134,23 @@ class DataProvider:
                                              index=unlabeled_gex_dat.index, columns=unlabeled_gex_dat.columns)
             labeled_mut_dat = pd.DataFrame(self.mut_scaler.transform(labeled_mut_dat),
                                            index=labeled_mut_dat.index, columns=labeled_mut_dat.columns)
+            labeled_mut_dat = pd.DataFrame(self.mut_scaler.transform(labeled_mut_dat),
+                                           index=labeled_mut_dat.index, columns=labeled_mut_dat.columns)
+            labeled_mut_only_dat = pd.DataFrame(self.mut_scaler.transform(labeled_mut_only_dat),
+                                           index=labeled_mut_only_dat.index, columns=labeled_mut_only_dat.columns)
             unlabeled_mut_dat = pd.DataFrame(self.mut_scaler.transform(unlabeled_mut_dat),
                                              index=unlabeled_mut_dat.index, columns=unlabeled_mut_dat.columns)
 
-        labeled_data = {}
-        unlabeled_data = {}
+        labeled_data = dict()
+        unlabeled_data = dict()
+        labeled_test_dat = dict()
         labeled_data['mut'] = labeled_mut_dat
         labeled_data['gex'] = labeled_gex_dat
         labeled_data['target'] = labeled_targets_dat
         unlabeled_data['mut'] = unlabeled_mut_dat
         unlabeled_data['gex'] = unlabeled_gex_dat
+        labeled_test_dat['mut'] = labeled_mut_only_dat
+        labeled_test_dat['target'] = labeled_mut_only_target_dat
 
         self.target_scaler = dict()
         for drug in labeled_data['target'].columns:
@@ -136,7 +160,7 @@ class DataProvider:
                 self.target_scaler[drug].transform(
                     labeled_data['target'].loc[~labeled_data['target'][drug].isna(), drug].values.reshape(-1, 1)))
 
-        return labeled_data, unlabeled_data
+        return labeled_data, unlabeled_data, labeled_test_dat
 
     def _get_shape_dict(self):
         shape_dict = dict()
@@ -155,5 +179,3 @@ class DataProvider:
         kfold = KFold(n_splits=k, shuffle=True, random_state=self.random_seed)
         cv_splits = list(kfold.split(self.labeled_data['target']))
         return cv_splits
-
-

@@ -78,14 +78,14 @@ if __name__ == '__main__':
     parser.set_defaults(propagation=True)
     parser.add_argument('--method', dest='method', nargs='?', default='rf', choices=['rf', 'enet', 'xgb'])
     parser.add_argument('--target', dest='target', nargs='?', default='AUC', choices=['AUC', 'LN_IC50'])
-    parser.add_argument('--filter', dest='filter', nargs='?', default='MAD', choices=['MAD', 'ALL'])
+    parser.add_argument('--filter', dest='filter', nargs='?', default='FILE', choices=['MAD', 'FILE'])
     parser.add_argument('--feat_num', dest='feature_number', nargs='?', default=5000)
 
     args = parser.parse_args()
-    if args.filter == 'MAD':
-        feature_filter_fn = preprocess_xena_utils.filter_with_MAD
-    else:
-        feature_filter_fn = None
+    # if args.filter == 'MAD':
+    #     feature_filter_fn = preprocess_xena_utils.filter_with_MAD
+    # else:
+    #     feature_filter_fn = None
 
     if args.method == 'enet':
         model_fn = process_with_enet
@@ -94,11 +94,15 @@ if __name__ == '__main__':
     else:
         model_fn = process_with_rf
 
-    data_provider = data.DataProvider(feature_filter_fn=feature_filter_fn, target=args.target,
+    data_provider = data.DataProvider(feature_filter=args.filter, target=args.target,
                                       feature_number=args.feature_number,
                                       omics=['gex', 'mut'], scale_fn=data.min_max_scale)
     data_provider.labeled_data['gex'].columns = data_provider.labeled_data['gex'].columns + '_gex'
     data_provider.labeled_data['mut'].columns = data_provider.labeled_data['gex'].columns + '_mut'
+
+    mut_test_prediction_df = pd.DataFrame(np.full_like(data_provider.labeled_test_data['target'], fill_value=-1),
+                                     index=data_provider.labeled_test_data['target'].index,
+                                     columns=data_provider.labeled_test_data['target'].columns)
 
     mut_prediction_df = pd.DataFrame(np.full_like(data_provider.labeled_data['target'], fill_value=-1),
                                      index=data_provider.labeled_data['target'].index,
@@ -122,8 +126,18 @@ if __name__ == '__main__':
         # print(X.columns)
         y = y.reindex(sample_ids)
 
-        kfold = KFold(n_splits=5, shuffle=True, random_state=2020)
-        for train_index, test_index in kfold.split(y):
+        outer_kfold = KFold(n_splits=5, shuffle=True, random_state=2020)
+        cv_split = outer_kfold.split(X_mut)
+        try:
+            print('Mutation-Only Training')
+            trained_model = model_fn(X_mut, y, list(cv_split))
+            prediction = trained_model.predict(data_provider.labeled_test_data['mut'])
+            mut_test_prediction_df.loc[data_provider.labeled_test_data['mut'].index, drug] = prediction
+        except Exception as e:
+            print(e)
+
+        outer_kfold = KFold(n_splits=5, shuffle=True, random_state=2020)
+        for train_index, test_index in outer_kfold.split(y):
             X_mut_train, X_mut_test = X_mut.iloc[train_index, :], X_mut.iloc[test_index, :]
             X_gex_train, X_gex_test = X_gex.iloc[train_index, :], X_gex.iloc[test_index, :]
             X_train, X_test = X.iloc[train_index, :], X.iloc[test_index, :]
@@ -134,7 +148,7 @@ if __name__ == '__main__':
             #cv_split = kfold.split(X)
             #try:
             #    print('Overlapped Training')
-            #    trained_model = model_fn(X, y, list(cv_split))
+            #    trained_model = model_fn(X_train, y, list(cv_split))
             #    prediction = trained_model.predict(X_test)
             #    overlapped_prediction_df.loc[y.index[test_index], drug] = prediction
             #except Exception as e:
@@ -144,7 +158,7 @@ if __name__ == '__main__':
             cv_split = kfold.split(X_gex)
             try:
                 print('Gex Training')
-                trained_model = model_fn(X_gex, y, list(cv_split))
+                trained_model = model_fn(X_gex_train, y, list(cv_split))
                 prediction = trained_model.predict(X_gex_test)
                 gex_prediction_df.loc[y.index[test_index], drug] = prediction
             except Exception as e:
@@ -154,11 +168,15 @@ if __name__ == '__main__':
             cv_split = kfold.split(X_mut)
             try:
                 print('Mutation Training')
-                trained_model = model_fn(X_mut, y, list(cv_split))
+                trained_model = model_fn(X_mut_train, y, list(cv_split))
                 prediction = trained_model.predict(X_mut_test)
                 mut_prediction_df.loc[y.index[test_index], drug] = prediction
             except Exception as e:
                 print(e)
+
+    mut_test_prediction_df.to_csv(os.path.join('predictions', args.target + '_' + args.method + '_mut_only' + str(
+        args.propagation) + '_' + args.filter + '_prediction.csv'),
+                                    index_label='Sample')
 
     overlapped_prediction_df.to_csv(os.path.join('predictions', args.target + '_' + args.method + '_both_' + str(
         args.propagation) + '_' + args.filter + '_multi_regression_5fold_prediction.csv'),

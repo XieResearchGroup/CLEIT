@@ -38,8 +38,8 @@ def get_normal_samples(sample_info_file_path=data_config.xena_sample_file):
     else:
         return None
 
-def preprocess_gex_df(file_path=data_config.xena_gex_file, df=None, MAD=False, feature_list=None,
-                      output_file_path=None):
+def preprocess_gex_df(file_path=data_config.xena_gex_file, df=None, MAD=False, feature_num = 5000, feature_list=None,
+                      output_file_path=None, mapping_file=data_config.xena_id_mapping_file):
     if df is None:
         # mapping_df = get_id_mapping()
         with gzip.open(filename=file_path) as f:
@@ -47,16 +47,29 @@ def preprocess_gex_df(file_path=data_config.xena_gex_file, df=None, MAD=False, f
         normal_samples = get_normal_samples(data_config.xena_sample_file)
         if normal_samples:
             df.drop(columns=df.columns.intersection(normal_samples), inplace=True)
-        df.index = df.index.map(lambda s: s[:s.find('.')])
+        #df.index = df.index.map(lambda s: s[:s.find('.')])
         df = 2 ** df - 0.001
-        # df = mapping_df.merge(df, left_index=True, right_index=True)
+        if mapping_file:
+            print('Start Mapping')
+            mapping_df = pd.read_csv(mapping_file, sep='\t',index_col=0)
+            mapping_dict = mapping_df['gene'].to_dict()
+            df.index = df.index.map(mapping_dict)
+            if any(df.index.isna()):
+                print('removing NA')
+                df = df.loc[df.index.dropna()]
+            print('start grouping')
+            df = df.groupby(level=0).mean()
         # df = df.groupby('gene').mean()
         df = df.transpose()
-        df = filter_features(df)
-        df = np.log2(df + 0.001)
+        df = np.log1p(df)
         df.index.name = 'Sample'
     if MAD:
-        df = filter_with_MAD(df)
+        df = df.transpose()
+        df = np.exp(df)
+        df = filter_features(df)
+        df = np.log1p(df-1.0)
+        df = df.transpose()
+        df = filter_with_MAD(df, k=feature_num)
         if output_file_path:
             output_file_path = output_file_path + '_MAD'
     if feature_list is not None:
@@ -64,6 +77,7 @@ def preprocess_gex_df(file_path=data_config.xena_gex_file, df=None, MAD=False, f
         df = df[genes_to_keep]
         if output_file_path:
             output_file_path = output_file_path + '_filtered'
+    df = df.astype('float32')
     print('Preprocessed data has {0} samples and {1} features'.format(df.shape[0], df.shape[1]))
     if output_file_path:
         df.to_csv(output_file_path + '.csv', index_label='Sample')
@@ -106,6 +120,7 @@ def preprocess_mut(propagation_flag=True, mutation_dat_file=data_config.xena_mut
                 to_drop.append(sample_id)
         if len(to_drop) > 0:
             propagation_result.drop(to_drop, inplace=True)
+        propagation_result = propagation_result.astype('float32')
         if output_file_path:
             print('Preprocessed data has {0} samples and {1} features'.format(propagation_result.shape[0], propagation_result.shape[1]))
             propagation_result.to_csv(output_file_path+'_propagated.csv', index_label='Sample')
@@ -118,5 +133,5 @@ def preprocess_mut(propagation_flag=True, mutation_dat_file=data_config.xena_mut
         return binary_mutation_df
 
 if __name__=='__main__':
-    preprocess_gex_df(output_file_path=data_config.xena_gex_file)
-    preprocess_mut(output_file_path=data_config.xena_preprocessed_mut_file)
+    preprocess_gex_df(output_file_path=data_config.xena_preprocessed_gex_file)
+    #preprocess_mut(output_file_path=data_config.xena_preprocessed_mut_file)
