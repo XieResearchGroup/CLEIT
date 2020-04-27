@@ -136,7 +136,8 @@ def fine_tune_gex_encoder(encoder, raw_X,
 
     if gradual_unfreezing_flag:
         encoder.trainable = False
-
+    shared_regressor_module = module.MLPBlock(architecture=[128], output_act_fn=keras.activations.relu,
+                                                output_dim=64)
     for drug in target_df.columns:
         gex_supervisor_dict[drug] = module.MLPBlock(architecture=mlp_architecture, output_act_fn=mlp_output_act_fn,
                                                     output_dim=mlp_output_dim)
@@ -155,6 +156,7 @@ def fine_tune_gex_encoder(encoder, raw_X,
 
         with tf.GradientTape() as tape:
             total_loss = sum(encoder.losses)
+            total_loss += sum(shared_regressor_module.losses)
             to_train_variables = encoder.trainable_variables
             if gradual_unfreezing_flag:
                 if epoch > min_epoch:
@@ -166,6 +168,7 @@ def fine_tune_gex_encoder(encoder, raw_X,
                     if free_layers <= 0:
                         gradual_unfreezing_flag = False
                         encoder.trainable = True
+            to_train_variables.extend(shared_regressor_module.trainable_variables)
             tape.watch(to_train_variables)
             for drug in target_df.columns:
                 # model = keras.Sequential()
@@ -195,8 +198,11 @@ def fine_tune_gex_encoder(encoder, raw_X,
                     encoded_X = encoder(train_X, training=True)[0]
                 else:
                     encoded_X = encoder(train_X, training=True)
+                regressor = keras.Sequential()
+                regressor.add(shared_regressor_module)
+                regressor.add(gex_supervisor_dict[drug])
 
-                preds = tf.squeeze(gex_supervisor_dict[drug](encoded_X, training=True))
+                preds = tf.squeeze(regressor(encoded_X, training=True))
                 loss_value = loss_fn(y_pred=preds, y_true=train_Y)
 
                 print('Training loss (for %s) at epoch %s: %s' % (drug, epoch + 1, float(loss_value)))
@@ -220,7 +226,7 @@ def fine_tune_gex_encoder(encoder, raw_X,
                 else:
                     encoded_val_X = encoder(val_X, training=False)
 
-                val_preds = tf.squeeze(gex_supervisor_dict[drug](encoded_val_X, training=False))
+                val_preds = tf.squeeze(regressor(encoded_val_X, training=False))
 
                 val_pearson = pearson_correlation(y_pred=val_preds, y_true=val_Y).numpy()
                 val_spearman = spearman_correlation(y_pred=val_preds, y_true=val_Y).numpy()
@@ -255,6 +261,7 @@ def fine_tune_gex_encoder(encoder, raw_X,
             if validation_history['val_total'][validation_monitoring_metric][-1] > best_overall_metric:
                 best_overall_metric = validation_history['val_total'][validation_monitoring_metric][-1]
                 encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
+                shared_regressor_module.save_weights(os.path.join(output_folder, 'shared_regressor_weights'), save_format='tf')
                 for drug in target_df.columns:
                     gex_supervisor_dict[drug].save_weights(os.path.join(output_folder, drug + '_regressor_weights'),
                                                            save_format='tf')
@@ -406,6 +413,10 @@ def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
     if gradual_unfreezing_flag:
         encoder.trainable = False
 
+    shared_regressor_module = module.MLPBlock(architecture=[128], output_act_fn=keras.activations.relu,
+                                            output_dim=64)
+    shared_regressor_module.load_weights(os.path.join(reference_folder, drug + 'shared_regressor_weights'))
+
     for drug in target_df.columns:
         mut_supervisor_dict[drug] = module.MLPBlock(architecture=mlp_architecture, output_act_fn=mlp_output_act_fn,
                                                     output_dim=mlp_output_dim)
@@ -424,6 +435,7 @@ def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
 
         with tf.GradientTape() as tape:
             total_loss = sum(encoder.losses)
+            total_loss += sum(shared_regressor_module.losses)
             to_train_variables = encoder.trainable_variables
             if gradual_unfreezing_flag:
                 if epoch > min_epoch:
@@ -436,6 +448,7 @@ def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
                         gradual_unfreezing_flag = False
                         encoder.trainable = True
             tape.watch(to_train_variables)
+            to_train_variables.extend(shared_regressor_module.trainable_variables)
 
             for drug in target_df.columns:
                 # model = keras.Sequential()
@@ -471,7 +484,11 @@ def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
                     encoded_X = encoder(train_X, training=True)
                     reference_encoded_x = reference_encoder(train_reference_X, training=False)
 
-                preds = tf.squeeze(mut_supervisor_dict[drug](encoded_X, training=True))
+                regressor = keras.Sequential()
+                regressor.add(shared_regressor_module)
+                regressor.add(mut_supervisor_dict[drug])
+
+                preds = tf.squeeze(regressor(encoded_X, training=True))
                 loss_value = loss_fn(y_pred=preds, y_true=train_Y)
                 loss_value += alpha * transmission_loss_fn(reference_encoded_x, encoded_X)
 
@@ -499,7 +516,7 @@ def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
                     encoded_val_X = encoder(val_X, training=False)
                     # reference_encoded_val_x = reference_encoder(val_reference_X, training = False)
 
-                val_preds = tf.squeeze(mut_supervisor_dict[drug](encoded_val_X, training=False))
+                val_preds = tf.squeeze(regressor(encoded_val_X, training=False))
 
                 val_pearson = pearson_correlation(y_pred=val_preds, y_true=val_Y).numpy()
                 val_spearman = spearman_correlation(y_pred=val_preds, y_true=val_Y).numpy()
@@ -534,6 +551,7 @@ def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
             if validation_history['val_total'][validation_monitoring_metric][-1] > best_overall_metric:
                 best_overall_metric = validation_history['val_total'][validation_monitoring_metric][-1]
                 encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
+                shared_regressor_module.save_weights(os.path.join(output_folder, 'shared_regressor_weights'), save_format='tf')
                 for drug in target_df.columns:
                     mut_supervisor_dict[drug].save_weights(os.path.join(output_folder, drug + '_regressor_weights'),
                                                            save_format='tf')
@@ -723,7 +741,9 @@ def fine_tune_mut_encoder_with_GAN(encoder, raw_X,
 
     if gradual_unfreezing_flag:
         encoder.trainable = False
-
+    shared_regressor_module = module.MLPBlock(architecture=[128], output_act_fn=keras.activations.relu,
+                                            output_dim=64)
+    shared_regressor_module.load_weights(os.path.join(reference_folder, drug + 'shared_regressor_weights'))
     for drug in target_df.columns:
         mut_supervisor_dict[drug] = module.MLPBlock(architecture=mlp_architecture, output_act_fn=mlp_output_act_fn,
                                                     output_dim=mlp_output_dim)
@@ -743,6 +763,7 @@ def fine_tune_mut_encoder_with_GAN(encoder, raw_X,
 
         with tf.GradientTape() as tape:
             total_loss = sum(encoder.losses)
+            total_loss += sum(shared_regressor_module.losses)
             to_train_variables = encoder.trainable_variables
             if gradual_unfreezing_flag:
                 if epoch > min_epoch:
@@ -755,6 +776,7 @@ def fine_tune_mut_encoder_with_GAN(encoder, raw_X,
                         gradual_unfreezing_flag = False
                         encoder.trainable = True
 
+            to_train_variables.extend(shared_regressor_module)
             for drug in target_df.columns:
                 # model = keras.Sequential()
                 # model.add(encoder)
@@ -784,7 +806,11 @@ def fine_tune_mut_encoder_with_GAN(encoder, raw_X,
                 else:
                     encoded_X = encoder(train_X, training=True)
 
-                preds = tf.squeeze(mut_supervisor_dict[drug](encoded_X, training=True))
+                regressor = keras.Sequential()
+                regressor.add(shared_regressor_module)
+                regressor.add(mut_supervisor_dict[drug])
+
+                preds = tf.squeeze(regressor(encoded_X, training=True))
                 loss_value = loss_fn(y_pred=preds, y_true=train_Y)
 
                 print('Training loss (for %s) at epoch %s: %s' % (drug, epoch + 1, float(loss_value)))
@@ -808,7 +834,7 @@ def fine_tune_mut_encoder_with_GAN(encoder, raw_X,
                 else:
                     encoded_val_X = encoder(val_X, training=False)
 
-                val_preds = tf.squeeze(mut_supervisor_dict[drug](encoded_val_X, training=False))
+                val_preds = tf.squeeze(regressor(encoded_val_X, training=False))
 
                 val_pearson = pearson_correlation(y_pred=val_preds, y_true=val_Y).numpy()
                 val_spearman = spearman_correlation(y_pred=val_preds, y_true=val_Y).numpy()
@@ -843,6 +869,7 @@ def fine_tune_mut_encoder_with_GAN(encoder, raw_X,
             if validation_history['val_total'][validation_monitoring_metric][-1] > best_overall_metric:
                 best_overall_metric = validation_history['val_total'][validation_monitoring_metric][-1]
                 encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
+                shared_regressor_module.save_weights(os.path.join(output_folder, 'shared_regressor_weights'), save_format='tf')
                 for drug in target_df.columns:
                     mut_supervisor_dict[drug].save_weights(os.path.join(output_folder, drug + '_regressor_weights'),
                                                            save_format='tf')

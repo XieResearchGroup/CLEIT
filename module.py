@@ -85,7 +85,7 @@ class AE(keras.Model):
     def __init__(self, latent_dim, output_dim, architecture, output_act_fn=None, noise_fn=None, name='ae', **kwargs):
         super(AE, self).__init__(name=name, **kwargs)
         if noise_fn is not None:
-            self.noise_layer = noise_fn(0.01)
+            self.noise_layer = noise_fn(0.005)
         self.encoder = EncoderBlock(latent_dim=latent_dim, architecture=architecture, output_act_fn=output_act_fn)
         self.decoder = MLPBlock(output_dim=output_dim, architecture=architecture[::-1], output_act_fn=output_act_fn,
                                 name='decoder')

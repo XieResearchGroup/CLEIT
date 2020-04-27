@@ -10,14 +10,15 @@ from module import AE, VAE
 import os
 import pickle
 import utils
+import model_config
 
 if __name__ == '__main__':
-    data_provider = data.DataProvider(feature_filter_fn=preprocess_xena_utils.filter_with_MAD, feature_number=10000,
+    data_provider = data.DataProvider(feature_filter='FILE',
                                       omics=['gex', 'mut'], scale_fn=data.min_max_scale)
     tf.keras.backend.clear_session()
     gex_auto_encoder = VAE(latent_dim=128,
                            output_dim=data_provider.shape_dict['gex'],
-                           architecture=[1024, 512, 256],
+                           architecture=model_config.encoder_architecture,
                            noise_fn=keras.layers.GaussianNoise,
                            output_act_fn=keras.activations.sigmoid)
 
