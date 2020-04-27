@@ -56,6 +56,7 @@ def preprocess_target_data(score='AUC', output_file_path=None):
 
     ccle_sample_info = pd.read_csv(data_config.ccle_sample_file, index_col=4)
     ccle_sample_info.index = ccle_sample_info.index.astype(pd.Int32Dtype())
+    ccle_sample_info = ccle_sample_info.loc[ccle_sample_info.index.dropna()]
 
     gdsc_sample_info = pd.read_csv(data_config.gdsc_sample_file, header=0, index_col=1)
     gdsc_sample_info.index = gdsc_sample_info.index.astype(pd.Int32Dtype())
