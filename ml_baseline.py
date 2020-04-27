@@ -145,7 +145,7 @@ if __name__ == '__main__':
             y_train, y_test = y[train_index], y[test_index]
 
             #kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
-            #cv_split = kfold.split(X)
+            #cv_split = kfold.split(X_train)
             #try:
             #    print('Overlapped Training')
             #    trained_model = model_fn(X_train, y, list(cv_split))
@@ -155,7 +155,7 @@ if __name__ == '__main__':
             #    print(e)
 
             kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
-            cv_split = kfold.split(X_gex)
+            cv_split = kfold.split(X_gex_train)
             try:
                 print('Gex Training')
                 trained_model = model_fn(X_gex_train, y, list(cv_split))
@@ -165,7 +165,7 @@ if __name__ == '__main__':
                 print(e)
 
             kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
-            cv_split = kfold.split(X_mut)
+            cv_split = kfold.split(X_mut_train)
             try:
                 print('Mutation Training')
                 trained_model = model_fn(X_mut_train, y, list(cv_split))
