@@ -158,7 +158,7 @@ if __name__ == '__main__':
             cv_split = kfold.split(X_gex_train)
             try:
                 print('Gex Training')
-                trained_model = model_fn(X_gex_train, y, list(cv_split))
+                trained_model = model_fn(X_gex_train, y_train, list(cv_split))
                 prediction = trained_model.predict(X_gex_test)
                 gex_prediction_df.loc[y.index[test_index], drug] = prediction
             except Exception as e:
@@ -168,7 +168,7 @@ if __name__ == '__main__':
             cv_split = kfold.split(X_mut_train)
             try:
                 print('Mutation Training')
-                trained_model = model_fn(X_mut_train, y, list(cv_split))
+                trained_model = model_fn(X_mut_train, y_train, list(cv_split))
                 prediction = trained_model.predict(X_mut_test)
                 mut_prediction_df.loc[y.index[test_index], drug] = prediction
             except Exception as e:
