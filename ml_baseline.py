@@ -98,7 +98,7 @@ if __name__ == '__main__':
                                       feature_number=args.feature_number,
                                       omics=['gex', 'mut'], scale_fn=data.min_max_scale)
     data_provider.labeled_data['gex'].columns = data_provider.labeled_data['gex'].columns + '_gex'
-    data_provider.labeled_data['mut'].columns = data_provider.labeled_data['gex'].columns + '_mut'
+    data_provider.labeled_data['mut'].columns = data_provider.labeled_data['mut'].columns + '_mut'
 
     mut_test_prediction_df = pd.DataFrame(np.full_like(data_provider.labeled_test_data['target'], fill_value=-1),
                                      index=data_provider.labeled_test_data['target'].index,
