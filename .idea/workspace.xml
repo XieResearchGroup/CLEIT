@@ -2,7 +2,13 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="24740e00-0746-4525-a150-b7e4a54c424b" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/ml_baseline.py" beforeDir="false" afterPath="$PROJECT_DIR$/ml_baseline.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/CLRN.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/CLRN.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ipynb_checkpoints/test-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/.ipynb_checkpoints/test-checkpoint.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/module.py" beforeDir="false" afterPath="$PROJECT_DIR$/module.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/run.py" beforeDir="false" afterPath="$PROJECT_DIR$/run.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/train.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -43,6 +49,8 @@
   </component>
   <component name="PropertiesComponent">
     <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="run.code.analysis.last.selected.profile" value="aDefault" />
     <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
@@ -124,7 +132,14 @@
       <workItem from="1587664838217" duration="29000" />
       <workItem from="1587664918789" duration="49349000" />
       <workItem from="1587768732269" duration="18138000" />
-      <workItem from="1587932274656" duration="5350000" />
+      <workItem from="1587932274656" duration="5616000" />
+      <workItem from="1587949535116" duration="29000" />
+      <workItem from="1587949569514" duration="496000" />
+      <workItem from="1587958107459" duration="10000" />
+      <workItem from="1587958142244" duration="694000" />
+      <workItem from="1587961692647" duration="16598000" />
+      <workItem from="1588037496978" duration="1276000" />
+      <workItem from="1588039287697" duration="1875000" />
     </task>
     <servers />
   </component>
@@ -149,11 +164,11 @@
     </state>
     <state x="328" y="143" key="#com.intellij.openapi.updateSettings.impl.PluginUpdateInfoDialog/0.0.1280.800/-2560.0.2560.1440@0.0.1280.800" timestamp="1587664846863" />
     <state x="328" y="143" key="#com.intellij.openapi.updateSettings.impl.PluginUpdateInfoDialog/0.0.1280.800@0.0.1280.800" timestamp="1585258601120" />
-    <state x="-1529" y="582" key="ANALYSIS_DLG_com.intellij.analysis.BaseAnalysisAction$1" timestamp="1587751020404">
+    <state x="-1529" y="582" key="ANALYSIS_DLG_com.intellij.analysis.BaseAnalysisAction$1" timestamp="1588037540913">
       <screen x="-2560" y="0" width="2560" height="1440" />
     </state>
     <state x="-1529" y="582" key="ANALYSIS_DLG_com.intellij.analysis.BaseAnalysisAction$1/0.0.1280.800/-2560.0.2560.1440@-2560.0.2560.1440" timestamp="1587751020404" />
-    <state x="-1529" y="582" key="ANALYSIS_DLG_com.intellij.analysis.BaseAnalysisAction$1/0.23.1280.777/-2560.0.2560.1440@-2560.0.2560.1440" timestamp="1587691312928" />
+    <state x="-1529" y="582" key="ANALYSIS_DLG_com.intellij.analysis.BaseAnalysisAction$1/0.23.1280.777/-2560.0.2560.1440@-2560.0.2560.1440" timestamp="1588037540913" />
     <state x="-1427" y="641" key="VCS.ChangelistChooser" timestamp="1587690300242">
       <screen x="-2560" y="0" width="2560" height="1440" />
     </state>
@@ -172,6 +187,11 @@
     <state x="317" y="222" key="com.intellij.ide.util.TipDialog/0.0.1280.800/-2560.0.2560.1440@0.0.1280.800" timestamp="1587664837710" />
     <state x="317" y="222" key="com.intellij.ide.util.TipDialog/0.0.1280.800@0.0.1280.800" timestamp="1586557188599" />
     <state x="317" y="222" key="com.intellij.ide.util.TipDialog/0.23.1280.734@0.23.1280.734" timestamp="1585515267773" />
+    <state x="-2471" y="3" width="2441" height="1375" maximized="true" key="dock-window-1" timestamp="1588036312141">
+      <screen x="-2560" y="0" width="2560" height="1440" />
+    </state>
+    <state x="-2471" y="3" width="2441" height="1375" maximized="true" key="dock-window-1/0.0.1280.800/-2560.0.2560.1440@-2560.0.2560.1440" timestamp="1588036312141" />
+    <state x="0" y="23" width="1280" height="734" maximized="true" key="dock-window-1/0.23.1280.734/-2560.0.2560.1440@-2560.0.2560.1440" timestamp="1588033659332" />
     <state x="-1433" y="518" key="refactoring.ChangeSignatureDialog" timestamp="1587674935147">
       <screen x="-2560" y="0" width="2560" height="1440" />
     </state>

@@ -109,7 +109,7 @@ class VAE(keras.Model):
                  noise_fn=None, name='ae', **kwargs):
         super(VAE, self).__init__(name=name, **kwargs)
         if noise_fn is not None:
-            self.noise_layer = noise_fn(0.1)
+            self.noise_layer = noise_fn(0.005)
         self.encoder = EncoderBlock(latent_dim=latent_dim, architecture=architecture, output_act_fn=output_act_fn,
                                     kernel_regularizer_l=kernel_regularizer_l,
                                     stochastic_flag=True)

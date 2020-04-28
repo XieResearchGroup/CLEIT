@@ -422,10 +422,10 @@ def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
                                               output_dim=model_config.shared_regressor_output_dim,
                                               kernel_regularizer_l=model_config.kernel_regularizer_l)
 
-    shared_regressor_module.load_weights(os.path.join(reference_folder, drug + 'shared_regressor_weights'))
+    shared_regressor_module.load_weights(os.path.join(reference_folder, 'shared_regressor_weights'))
 
     for drug in target_df.columns:
-        gex_supervisor_dict[drug] = module.MLPBlock(architecture=mlp_architecture,
+        mut_supervisor_dict[drug] = module.MLPBlock(architecture=mlp_architecture,
                                                     output_act_fn=mlp_output_act_fn,
                                                     output_dim=mlp_output_dim,
                                                     kernel_regularizer_l=model_config.kernel_regularizer_l)
@@ -753,7 +753,7 @@ def fine_tune_mut_encoder_with_GAN(encoder, raw_X,
     shared_regressor_module = module.MLPBlock(architecture=model_config.shared_regressor_architecture,
                                               output_act_fn=model_config.shared_regressor_act_fn,
                                               output_dim=model_config.shared_regressor_output_dim)
-    shared_regressor_module.load_weights(os.path.join(reference_folder, drug + 'shared_regressor_weights'))
+    shared_regressor_module.load_weights(os.path.join(reference_folder, 'shared_regressor_weights'))
     for drug in target_df.columns:
         mut_supervisor_dict[drug] = module.MLPBlock(architecture=mlp_architecture, output_act_fn=mlp_output_act_fn,
                                                     output_dim=mlp_output_dim)
