@@ -3,4 +3,4 @@ nvidia-docker run --name clrn_run -it --rm -v /raid/home/dihe/CLRN:/CLRN clrn:pu
 
 ctrl+P+Q
 
-docker exec -it clrn:publish_1.0 /bin/bash
+docker exec -it clrn_run /bin/bash
