@@ -2,13 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="24740e00-0746-4525-a150-b7e4a54c424b" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/CLRN.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/CLRN.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.ipynb_checkpoints/test-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/.ipynb_checkpoints/test-checkpoint.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/module.py" beforeDir="false" afterPath="$PROJECT_DIR$/module.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/run.py" beforeDir="false" afterPath="$PROJECT_DIR$/run.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/train.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -139,7 +134,7 @@
       <workItem from="1587958142244" duration="694000" />
       <workItem from="1587961692647" duration="16598000" />
       <workItem from="1588037496978" duration="1276000" />
-      <workItem from="1588039287697" duration="1875000" />
+      <workItem from="1588039287697" duration="2087000" />
     </task>
     <servers />
   </component>
