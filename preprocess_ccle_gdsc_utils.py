@@ -160,11 +160,12 @@ def preprocess_ccle_mut(propagation_flag=True, mutation_dat_file=data_config.ccl
         binary_mutation_df = load_ccle_muation_df(mutation_dat_file, network_id_file=network_id_file)
         print('Propagation Start!')
 
-        kernel = pd.read_feather(kernel_file, columns=binary_mutation_df.columns.union(['index']))
+        #kernel = pd.read_feather(kernel_file, columns=binary_mutation_df.columns.union(['index']))
+        kernel = pd.read_feather(kernel_file)
         kernel.set_index('index', inplace=True)
         kernel.index = [ind.decode() for ind in kernel.index]
         kernel = kernel.transpose()
-
+        binary_mutation_df = binary_mutation_df[binary_mutation_df.columns.intersection(kernel.columns)]
         propagation_result = pd.DataFrame(np.zeros((binary_mutation_df.shape[0], kernel.shape[1])),
                                           index=binary_mutation_df.index, columns=kernel.columns)
         to_drop = []
