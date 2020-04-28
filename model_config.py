@@ -11,12 +11,12 @@ regressor_architecture = [32, 16]
 regressor_act_fn = keras.activations.sigmoid
 
 #learning configurations
-kernel_regularizer_l = 0.001
+kernel_regularizer_l = 0.0001
 pre_training_lr = 1e-4
 fine_tuning_lr = 1e-5
-max_epoch = 100
-min_epoch = 10
+max_epoch = 5000
+min_epoch = 1000
 gradual_unfreezing_flag = True
-unfrozen_epoch = 5
+unfrozen_epoch = 100
 batch_size = 64
 alpha = 1.0
