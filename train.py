@@ -1,23 +1,23 @@
-from collections import defaultdict
 import tensorflow as tf
+import module
+import model_config
+from collections import defaultdict
 from sklearn.model_selection import KFold
 from tensorflow import keras
-import module
 from loss import *
 from utils import *
 
 
 def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
                      batch_size=64,
-                     optimizer=keras.optimizers.Adam(learning_rate=1e-4),
+                     optimizer=keras.optimizers.Adam(learning_rate=model_config.pre_training_lr),
                      loss_fn=keras.losses.MeanSquaredError(),
-                     min_epochs=10,
-                     max_epochs=100,
+                     min_epoch=10,
+                     max_epoch=100,
                      tolerance=10,
-                     diff_threshold=1e-3):
+                     diff_threshold=1e-2):
     output_folder = os.path.join('saved_weights', 'gex', repr(auto_encoder.encoder) + '_encoder_weights')
     safe_make_dir(output_folder)
-
     train_dataset = train_dataset.shuffle(buffer_size=1024).batch(batch_size)
     val_dataset = val_dataset.batch(batch_size)
 
@@ -33,7 +33,7 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
     best_loss = float('inf')
     tolerance_count = 0
 
-    for epoch in range(max_epochs):
+    for epoch in range(max_epoch):
         print('epoch: ', epoch)
         for step, (x_batch_train, y_batch_train) in enumerate(train_dataset):
             with tf.GradientTape() as tape:
@@ -78,7 +78,7 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
         else:
             tolerance_count += 1
 
-        if epoch < min_epochs:
+        if epoch < min_epoch:
             tolerance_count = 0
         else:
             if tolerance_count > tolerance:
@@ -100,7 +100,7 @@ def fine_tune_gex_encoder(encoder, raw_X,
                           mlp_architecture=None,
                           mlp_output_act_fn=keras.activations.sigmoid,
                           mlp_output_dim=1,
-                          optimizer=keras.optimizers.Adam(learning_rate=1e-5),
+                          optimizer=keras.optimizers.Adam(learning_rate=model_config.fine_tuning_lr),
                           loss_fn=penalized_mean_squared_error,
                           validation_monitoring_metric='pearson',
                           max_epoch=100,
@@ -136,11 +136,15 @@ def fine_tune_gex_encoder(encoder, raw_X,
 
     if gradual_unfreezing_flag:
         encoder.trainable = False
-    shared_regressor_module = module.MLPBlock(architecture=[128], output_act_fn=keras.activations.relu,
-                                                output_dim=64)
+    shared_regressor_module = module.MLPBlock(architecture=model_config.shared_regressor_architecture,
+                                              output_act_fn=model_config.shared_regressor_act_fn,
+                                              output_dim=model_config.shared_regressor_output_dim,
+                                              kernel_regularizer_l=model_config.kernel_regularizer_l)
     for drug in target_df.columns:
-        gex_supervisor_dict[drug] = module.MLPBlock(architecture=mlp_architecture, output_act_fn=mlp_output_act_fn,
-                                                    output_dim=mlp_output_dim)
+        gex_supervisor_dict[drug] = module.MLPBlock(architecture=mlp_architecture,
+                                                    output_act_fn=mlp_output_act_fn,
+                                                    output_dim=mlp_output_dim,
+                                                    kernel_regularizer_l=model_config.kernel_regularizer_l)
 
     for epoch in range(max_epoch):
 
@@ -277,12 +281,12 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
                      transmission_loss_fn,
                      alpha=1.,
                      batch_size=64,
-                     optimizer=keras.optimizers.Adam(learning_rate=1e-4),
+                     optimizer=keras.optimizers.Adam(learning_rate=model_config.pre_training_lr),
                      loss_fn=keras.losses.MeanSquaredError(),
-                     min_epochs=10,
-                     max_epochs=100,
+                     min_epoch=10,
+                     max_epoch=100,
                      tolerance=10,
-                     diff_threshold=1e-3):
+                     diff_threshold=1e-2):
     output_folder = os.path.join('saved_weights', 'mut', repr(auto_encoder.encoder) + '_encoder_weights')
     safe_make_dir(output_folder)
 
@@ -297,7 +301,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
     reference_encoder.trainable = False
 
 
-    for epoch in range(max_epochs):
+    for epoch in range(max_epoch):
         total_train_loss = 0.
         total_train_steps = 0
         total_val_loss = 0.
@@ -352,7 +356,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
         else:
             tolerance_count += 1
 
-        if epoch < min_epochs:
+        if epoch < min_epoch:
             tolerance_count = 0
         else:
             if tolerance_count > tolerance:
@@ -374,7 +378,7 @@ def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
                           mlp_architecture=None,
                           mlp_output_act_fn=keras.activations.sigmoid,
                           mlp_output_dim=1,
-                          optimizer=keras.optimizers.Adam(learning_rate=1e-5),
+                          optimizer=keras.optimizers.Adam(learning_rate=model_config.fine_tuning_lr),
                           loss_fn=penalized_mean_squared_error,
                           validation_monitoring_metric='pearson',
                           max_epoch=100,
@@ -413,13 +417,18 @@ def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
     if gradual_unfreezing_flag:
         encoder.trainable = False
 
-    shared_regressor_module = module.MLPBlock(architecture=[128], output_act_fn=keras.activations.relu,
-                                            output_dim=64)
+    shared_regressor_module = module.MLPBlock(architecture=model_config.shared_regressor_architecture,
+                                              output_act_fn=model_config.shared_regressor_act_fn,
+                                              output_dim=model_config.shared_regressor_output_dim,
+                                              kernel_regularizer_l=model_config.kernel_regularizer_l)
+
     shared_regressor_module.load_weights(os.path.join(reference_folder, drug + 'shared_regressor_weights'))
 
     for drug in target_df.columns:
-        mut_supervisor_dict[drug] = module.MLPBlock(architecture=mlp_architecture, output_act_fn=mlp_output_act_fn,
-                                                    output_dim=mlp_output_dim)
+        gex_supervisor_dict[drug] = module.MLPBlock(architecture=mlp_architecture,
+                                                    output_act_fn=mlp_output_act_fn,
+                                                    output_dim=mlp_output_dim,
+                                                    kernel_regularizer_l=model_config.kernel_regularizer_l)
         mut_supervisor_dict[drug].load_weights(os.path.join(reference_folder, drug + '_regressor_weights'))
 
     for epoch in range(max_epoch):
@@ -566,13 +575,13 @@ def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
 def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, val_dataset,
                               alpha=1.,
                               batch_size=64,
-                              optimizer=keras.optimizers.Adam(learning_rate=1e-4),
+                              optimizer=keras.optimizers.Adam(learning_rate=model_config.pre_training_lr),
                               loss_fn=keras.losses.MeanSquaredError(),
-                              min_epochs=10,
-                              max_epochs=100,
+                              min_epoch=10,
+                              max_epoch=100,
                               n_critic=5,
                               tolerance=10,
-                              diff_threshold=1e-3):
+                              diff_threshold=1e-2):
     # track validation critic loss
 
     output_folder = os.path.join('saved_weights', 'mut', repr(auto_encoder.encoder) + '_encoder_weights')
@@ -594,7 +603,7 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
 
     gp_optimizer = keras.optimizers.RMSprop()
 
-    for epoch in range(max_epochs * n_critic):
+    for epoch in range(max_epoch * n_critic):
         total_train_loss = 0.
         total_train_gen_loss = 0.
         total_train_steps = 0
@@ -682,7 +691,7 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
         else:
             tolerance_count += 1
 
-        if epoch < min_epochs:
+        if epoch < min_epoch:
             tolerance_count = 0
         else:
             if tolerance_count > tolerance:
@@ -704,7 +713,7 @@ def fine_tune_mut_encoder_with_GAN(encoder, raw_X,
                                    mlp_architecture=None,
                                    mlp_output_act_fn=keras.activations.sigmoid,
                                    mlp_output_dim=1,
-                                   optimizer=keras.optimizers.Adam(learning_rate=1e-5),
+                                   optimizer=keras.optimizers.Adam(learning_rate=model_config.fine_tuning_lr),
                                    loss_fn=penalized_mean_squared_error,
                                    validation_monitoring_metric='pearson',
                                    max_epoch=100,
@@ -741,8 +750,9 @@ def fine_tune_mut_encoder_with_GAN(encoder, raw_X,
 
     if gradual_unfreezing_flag:
         encoder.trainable = False
-    shared_regressor_module = module.MLPBlock(architecture=[128], output_act_fn=keras.activations.relu,
-                                            output_dim=64)
+    shared_regressor_module = module.MLPBlock(architecture=model_config.shared_regressor_architecture,
+                                              output_act_fn=model_config.shared_regressor_act_fn,
+                                              output_dim=model_config.shared_regressor_output_dim)
     shared_regressor_module.load_weights(os.path.join(reference_folder, drug + 'shared_regressor_weights'))
     for drug in target_df.columns:
         mut_supervisor_dict[drug] = module.MLPBlock(architecture=mlp_architecture, output_act_fn=mlp_output_act_fn,
