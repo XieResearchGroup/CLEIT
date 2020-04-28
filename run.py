@@ -16,7 +16,7 @@ if __name__ == '__main__':
     tf.keras.backend.clear_session()
     data_provider = data.DataProvider(feature_filter='FILE',
                                       omics=['gex', 'mut'])
-    with tf.device('/GPU:3'):
+    with tf.device('/physical_device:GPU:3'):
         train_dataset = tf.data.Dataset.from_tensor_slices(
             (data_provider.unlabeled_data['gex'].values, data_provider.unlabeled_data['gex'].values))
         val_dataset = tf.data.Dataset.from_tensor_slices(
