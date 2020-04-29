@@ -10,6 +10,8 @@ gdsc: https://www.cancerrxgene.org/gdsc1000/GDSC1000_WebResources/Home.html
 
 ## Preprocessing
 ![preprocessing](./figs/preprocessing.png?raw=true)
+![dat_summary](./figs/dat_summary.jpg?raw=true)
+
 
 ## CLRN framework
 ![clrn_framework](./figs/CLRN_Framework.png?raw=true)
