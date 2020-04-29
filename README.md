@@ -23,3 +23,7 @@ gdsc: https://www.cancerrxgene.org/gdsc1000/GDSC1000_WebResources/Home.html
 
 ## WGAN transmission
 ![wgan_trans](./figs/wgan_trans.png?raw=true)
+
+## Performance (0428)
+![perf](./figs/performance_0428.png?raw=true)
+
