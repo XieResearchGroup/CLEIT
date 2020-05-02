@@ -264,6 +264,12 @@ def fine_tune_gex_encoder(encoder, raw_X,
             validation_history['val_total']['mae'].append(total_val_mae)
 
             if validation_history['val_total'][validation_monitoring_metric][-1] > best_overall_metric:
+                print('best!')
+                print('best!')
+                print('best!')
+                print('best!')
+                print('best!')
+
                 best_overall_metric = validation_history['val_total'][validation_monitoring_metric][-1]
                 encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
                 shared_regressor_module.save_weights(os.path.join(output_folder, 'shared_regressor_weights'), save_format='tf')
@@ -347,6 +353,12 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
         val_loss_history.append(total_val_loss / float(total_val_steps))
 
         if val_loss_history[-1] < best_val_loss:
+
+            print('best!')
+            print('best!')
+            print('best!')
+            print('best!')
+            print('best!')
             auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
                                               save_format='tf')
             if val_loss_history[-1] + diff_threshold < best_val_loss:
@@ -559,6 +571,13 @@ def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
             validation_history['val_total']['mae'].append(total_val_mae)
 
             if validation_history['val_total'][validation_monitoring_metric][-1] > best_overall_metric:
+
+                print('best!')
+                print('best!')
+                print('best!')
+                print('best!')
+                print('best!')
+
                 best_overall_metric = validation_history['val_total'][validation_monitoring_metric][-1]
                 encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
                 shared_regressor_module.save_weights(os.path.join(output_folder, 'shared_regressor_weights'), save_format='tf')
