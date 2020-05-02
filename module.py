@@ -36,6 +36,7 @@ class EncoderBlock(keras.Model):
         return latent_code
 
 
+
 class MLPBlock(keras.Model):
     def __init__(self, output_dim, architecture, act_fn='relu', output_act_fn=None, name='mlp',
                  kernel_regularizer_l=0.001, **kwargs):

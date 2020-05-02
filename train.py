@@ -7,7 +7,7 @@ from tensorflow import keras
 from loss import *
 from utils import *
 
-
+#@tf.function
 def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
                      batch_size=64,
                      optimizer=keras.optimizers.Adam(learning_rate=model_config.pre_training_lr),
@@ -49,8 +49,8 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
                 print('Training loss (for one batch) at step %s: %s' % (step + 1, float(loss_value)))
                 print('Seen so far: %s samples' % ((step + 1) * batch_size))
 
-        train_mse = train_mse_metric.result().numpy()
-        train_mae = train_mae_metric.result().numpy()
+        train_mse = train_mse_metric.result()
+        train_mae = train_mae_metric.result()
         train_mse_list.append(train_mse)
         train_mae_list.append(train_mae)
         train_mse_metric.reset_states()
@@ -60,14 +60,15 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
             val_preds = auto_encoder(x_batch_val, training=False)
             val_mse_metric(y_batch_val, val_preds)
             val_mae_metric(y_batch_val, val_preds)
-        val_mse = val_mse_metric.result().numpy()
-        val_mae = val_mae_metric.result().numpy()
+        val_mse = val_mse_metric.result()
+        val_mae = val_mae_metric.result()
         val_mse_list.append(val_mse)
         val_mae_list.append(val_mae)
         val_mae_metric.reset_states()
         val_mse_metric.reset_states()
 
         if val_mse < best_loss:
+            print('best!')
             auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
                                               save_format='tf')
             if val_mse + diff_threshold < best_loss:
@@ -210,10 +211,10 @@ def fine_tune_gex_encoder(encoder, raw_X,
                 loss_value = loss_fn(y_pred=preds, y_true=train_Y)
 
                 print('Training loss (for %s) at epoch %s: %s' % (drug, epoch + 1, float(loss_value)))
-                train_pearson = pearson_correlation(y_pred=preds, y_true=train_Y).numpy()
-                train_spearman = spearman_correlation(y_pred=preds, y_true=train_Y).numpy()
-                train_mse = keras.losses.mean_squared_error(y_pred=preds, y_true=train_Y).numpy()
-                train_mae = keras.losses.mean_absolute_error(y_pred=preds, y_true=train_Y).numpy()
+                train_pearson = pearson_correlation(y_pred=preds, y_true=train_Y)
+                train_spearman = spearman_correlation(y_pred=preds, y_true=train_Y)
+                train_mse = keras.losses.mean_squared_error(y_pred=preds, y_true=train_Y)
+                train_mae = keras.losses.mean_absolute_error(y_pred=preds, y_true=train_Y)
 
                 total_train_pearson += train_pearson / float(target_df.shape[-1])
                 total_train_spearman += train_spearman / float(target_df.shape[-1])
@@ -232,10 +233,10 @@ def fine_tune_gex_encoder(encoder, raw_X,
 
                 val_preds = tf.squeeze(regressor(encoded_val_X, training=False))
 
-                val_pearson = pearson_correlation(y_pred=val_preds, y_true=val_Y).numpy()
-                val_spearman = spearman_correlation(y_pred=val_preds, y_true=val_Y).numpy()
-                val_mse = keras.losses.mean_squared_error(y_pred=val_preds, y_true=val_Y).numpy()
-                val_mae = keras.losses.mean_absolute_error(y_pred=val_preds, y_true=val_Y).numpy()
+                val_pearson = pearson_correlation(y_pred=val_preds, y_true=val_Y)
+                val_spearman = spearman_correlation(y_pred=val_preds, y_true=val_Y)
+                val_mse = keras.losses.mean_squared_error(y_pred=val_preds, y_true=val_Y)
+                val_mae = keras.losses.mean_absolute_error(y_pred=val_preds, y_true=val_Y)
 
                 total_val_pearson += val_pearson / float(target_df.shape[-1])
                 total_val_spearman += val_spearman / float(target_df.shape[-1])
@@ -329,7 +330,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
             if (step + 1) % 100 == 0:
                 print('Training loss (for one batch) at step %s: %s' % (step + 1, float(loss_value)))
                 print('Seen so far: %s samples' % ((step + 1) * batch_size))
-        train_loss_history.append(total_train_loss.numpy() / float(total_train_steps))
+        train_loss_history.append(total_train_loss / float(total_train_steps))
 
         for step, (x_batch_val, y_batch_val, reference_x_batch_val) in enumerate(val_dataset):
             total_val_steps += 1
@@ -343,7 +344,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
             val_loss_value = loss_fn(y_batch_val, val_preds)
             val_loss_value += alpha * transmission_loss_fn(reference_encoded_x_val, encoded_X_val)
             total_val_loss += val_loss_value
-        val_loss_history.append(total_val_loss.numpy() / float(total_val_steps))
+        val_loss_history.append(total_val_loss / float(total_val_steps))
 
         if val_loss_history[-1] < best_val_loss:
             auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
@@ -503,10 +504,10 @@ def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
 
                 print('Training loss (for %s) at epoch %s: %s' % (drug, epoch + 1, float(loss_value)))
 
-                train_pearson = pearson_correlation(y_pred=preds, y_true=train_Y).numpy()
-                train_spearman = spearman_correlation(y_pred=preds, y_true=train_Y).numpy()
-                train_mse = keras.losses.mean_squared_error(y_pred=preds, y_true=train_Y).numpy()
-                train_mae = keras.losses.mean_absolute_error(y_pred=preds, y_true=train_Y).numpy()
+                train_pearson = pearson_correlation(y_pred=preds, y_true=train_Y)
+                train_spearman = spearman_correlation(y_pred=preds, y_true=train_Y)
+                train_mse = keras.losses.mean_squared_error(y_pred=preds, y_true=train_Y)
+                train_mae = keras.losses.mean_absolute_error(y_pred=preds, y_true=train_Y)
 
                 total_train_pearson += train_pearson / float(target_df.shape[-1])
                 total_train_spearman += train_spearman / float(target_df.shape[-1])
@@ -527,10 +528,10 @@ def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
 
                 val_preds = tf.squeeze(regressor(encoded_val_X, training=False))
 
-                val_pearson = pearson_correlation(y_pred=val_preds, y_true=val_Y).numpy()
-                val_spearman = spearman_correlation(y_pred=val_preds, y_true=val_Y).numpy()
-                val_mse = keras.losses.mean_squared_error(y_pred=val_preds, y_true=val_Y).numpy()
-                val_mae = keras.losses.mean_absolute_error(y_pred=val_preds, y_true=val_Y).numpy()
+                val_pearson = pearson_correlation(y_pred=val_preds, y_true=val_Y)
+                val_spearman = spearman_correlation(y_pred=val_preds, y_true=val_Y)
+                val_mse = keras.losses.mean_squared_error(y_pred=val_preds, y_true=val_Y)
+                val_mae = keras.losses.mean_absolute_error(y_pred=val_preds, y_true=val_Y)
 
                 total_val_pearson += val_pearson / float(target_df.shape[-1])
                 total_val_spearman += val_spearman / float(target_df.shape[-1])
@@ -654,9 +655,9 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
             if (step + 1) % 100 == 0:
                 print('Training loss (for one batch) at step %s: %s' % (step + 1, float(loss_value)))
                 print('Seen so far: %s samples' % ((step + 1) * batch_size))
-        train_loss_history.append(total_train_loss.numpy() / float(total_train_steps))
+        train_loss_history.append(total_train_loss / float(total_train_steps))
         if (epoch + 1) % n_critic == 0:
-            train_gen_loss_history.append(total_train_gen_loss.numpy() / float(total_train_steps))
+            train_gen_loss_history.append(total_train_gen_loss / float(total_train_steps))
 
         for step, (x_batch_val, y_batch_val, reference_x_batch_val) in enumerate(val_dataset):
             total_val_steps += 1
@@ -676,9 +677,9 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
             total_val_loss += critic_val_loss
             if (epoch + 1) % n_critic == 0:
                 total_val_gen_loss -= tf.reduce_mean(critic_val_fake, axis=0)
-        val_loss_history.append(total_val_loss.numpy() / float(total_val_steps))
+        val_loss_history.append(total_val_loss / float(total_val_steps))
         if (epoch + 1) % n_critic == 0:
-            val_gen_loss_history.append(total_val_gen_loss.numpy() / float(total_val_steps))
+            val_gen_loss_history.append(total_val_gen_loss / float(total_val_steps))
 
         if val_loss_history[-1] < best_val_loss:
             auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
@@ -824,10 +825,10 @@ def fine_tune_mut_encoder_with_GAN(encoder, raw_X,
                 loss_value = loss_fn(y_pred=preds, y_true=train_Y)
 
                 print('Training loss (for %s) at epoch %s: %s' % (drug, epoch + 1, float(loss_value)))
-                train_pearson = pearson_correlation(y_pred=preds, y_true=train_Y).numpy()
-                train_spearman = spearman_correlation(y_pred=preds, y_true=train_Y).numpy()
-                train_mse = keras.losses.mean_squared_error(y_pred=preds, y_true=train_Y).numpy()
-                train_mae = keras.losses.mean_absolute_error(y_pred=preds, y_true=train_Y).numpy()
+                train_pearson = pearson_correlation(y_pred=preds, y_true=train_Y)
+                train_spearman = spearman_correlation(y_pred=preds, y_true=train_Y)
+                train_mse = keras.losses.mean_squared_error(y_pred=preds, y_true=train_Y)
+                train_mae = keras.losses.mean_absolute_error(y_pred=preds, y_true=train_Y)
 
                 total_train_pearson += train_pearson / float(target_df.shape[-1])
                 total_train_spearman += train_spearman / float(target_df.shape[-1])
@@ -846,10 +847,10 @@ def fine_tune_mut_encoder_with_GAN(encoder, raw_X,
 
                 val_preds = tf.squeeze(regressor(encoded_val_X, training=False))
 
-                val_pearson = pearson_correlation(y_pred=val_preds, y_true=val_Y).numpy()
-                val_spearman = spearman_correlation(y_pred=val_preds, y_true=val_Y).numpy()
-                val_mse = keras.losses.mean_squared_error(y_pred=val_preds, y_true=val_Y).numpy()
-                val_mae = keras.losses.mean_absolute_error(y_pred=val_preds, y_true=val_Y).numpy()
+                val_pearson = pearson_correlation(y_pred=val_preds, y_true=val_Y)
+                val_spearman = spearman_correlation(y_pred=val_preds, y_true=val_Y)
+                val_mse = keras.losses.mean_squared_error(y_pred=val_preds, y_true=val_Y)
+                val_mae = keras.losses.mean_absolute_error(y_pred=val_preds, y_true=val_Y)
 
                 total_val_pearson += val_pearson / float(target_df.shape[-1])
                 total_val_spearman += val_spearman / float(target_df.shape[-1])
