@@ -514,7 +514,7 @@ def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
                 loss_value = loss_fn(y_pred=preds, y_true=train_Y)
                 loss_value += alpha * transmission_loss_fn(reference_encoded_x, encoded_X)
 
-                print('Training loss (for %s) at epoch %s: %s' % (drug, epoch + 1, float(loss_value)))
+                #print('Training loss (for %s) at epoch %s: %s' % (drug, epoch + 1, float(loss_value)))
 
                 train_pearson = pearson_correlation(y_pred=preds, y_true=train_Y)
                 train_spearman = spearman_correlation(y_pred=preds, y_true=train_Y)
@@ -570,6 +570,8 @@ def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
             validation_history['val_total']['mse'].append(total_val_mse)
             validation_history['val_total']['mae'].append(total_val_mae)
 
+            print(validation_history['val_total'][validation_monitoring_metric][-1])
+            print(best_overall_metric)
             if validation_history['val_total'][validation_monitoring_metric][-1] > best_overall_metric:
 
                 print('best!')
