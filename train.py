@@ -262,6 +262,8 @@ def fine_tune_gex_encoder(encoder, raw_X,
             validation_history['val_total']['spearman'].append(total_val_spearman)
             validation_history['val_total']['mse'].append(total_val_mse)
             validation_history['val_total']['mae'].append(total_val_mae)
+            print(validation_history['val_total'][validation_monitoring_metric][-1])
+            print(best_overall_metric)
 
             if validation_history['val_total'][validation_monitoring_metric][-1] > best_overall_metric:
                 print('best!')
