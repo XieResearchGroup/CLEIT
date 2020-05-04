@@ -14,7 +14,7 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
                      loss_fn=keras.losses.MeanSquaredError(),
                      min_epoch=10,
                      max_epoch=100,
-                     tolerance=50,
+                     tolerance=10,
                      diff_threshold=1e-2):
     output_folder = os.path.join('saved_weights', 'gex', repr(auto_encoder.encoder) + '_encoder_weights')
     safe_make_dir(output_folder)
@@ -68,7 +68,6 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
         val_mse_metric.reset_states()
 
         if val_mse < best_loss:
-            print('best!')
             auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
                                               save_format='tf')
             if val_mse + diff_threshold < best_loss:
@@ -210,7 +209,7 @@ def fine_tune_gex_encoder(encoder, raw_X,
                 preds = tf.squeeze(regressor(encoded_X, training=True))
                 loss_value = loss_fn(y_pred=preds, y_true=train_Y)
 
-                print('Training loss (for %s) at epoch %s: %s' % (drug, epoch + 1, float(loss_value)))
+               #print('Training loss (for %s) at epoch %s: %s' % (drug, epoch + 1, float(loss_value)))
                 train_pearson = pearson_correlation(y_pred=preds, y_true=train_Y)
                 train_spearman = spearman_correlation(y_pred=preds, y_true=train_Y)
                 train_mse = keras.losses.mean_squared_error(y_pred=preds, y_true=train_Y)
@@ -237,7 +236,8 @@ def fine_tune_gex_encoder(encoder, raw_X,
                 val_spearman = spearman_correlation(y_pred=val_preds, y_true=val_Y)
                 val_mse = keras.losses.mean_squared_error(y_pred=val_preds, y_true=val_Y)
                 val_mae = keras.losses.mean_absolute_error(y_pred=val_preds, y_true=val_Y)
-
+                print(val_pearson)
+                print(float(target_df.shape[-1]))
                 total_val_pearson += val_pearson / float(target_df.shape[-1])
                 total_val_spearman += val_spearman / float(target_df.shape[-1])
                 total_val_mse += val_mse / float(target_df.shape[-1])
@@ -266,12 +266,6 @@ def fine_tune_gex_encoder(encoder, raw_X,
             print(best_overall_metric)
 
             if validation_history['val_total'][validation_monitoring_metric][-1] > best_overall_metric:
-                print('best!')
-                print('best!')
-                print('best!')
-                print('best!')
-                print('best!')
-
                 best_overall_metric = validation_history['val_total'][validation_monitoring_metric][-1]
                 encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
                 shared_regressor_module.save_weights(os.path.join(output_folder, 'shared_regressor_weights'), save_format='tf')
