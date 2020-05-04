@@ -349,12 +349,6 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
         val_loss_history.append(total_val_loss / float(total_val_steps))
 
         if val_loss_history[-1] < best_val_loss:
-
-            print('best!')
-            print('best!')
-            print('best!')
-            print('best!')
-            print('best!')
             auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
                                               save_format='tf')
             if val_loss_history[-1] + diff_threshold < best_val_loss:
