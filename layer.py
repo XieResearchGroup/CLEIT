@@ -1,5 +1,7 @@
 import tensorflow as tf
+import numpy as np
 from tensorflow import keras
+from scipy.linalg import block_diag
 
 
 class DenseLayer(keras.layers.Layer):
@@ -36,6 +38,47 @@ class DenseLayer(keras.layers.Layer):
     @classmethod
     def from_config(cls, config):
         return cls(**config)
+
+
+class DenseLayerWithMask(keras.layers.Layer):
+    def __init__(self, num_of_splits, units_per_split, activation='relu', kernel_initializer='he_normal',
+                 kernel_regularizer_l=0.001, bn_flag=True, **kwargs):
+        super(DenseLayerWithMask, self).__init__()
+        self.num_of_splits = num_of_splits
+        self.units_per_split = units_per_split
+        self.kernel_regularizer_l = kernel_regularizer_l
+        self.kernel_initializer = kernel_initializer
+        self.bn_flag = bn_flag
+        if kernel_regularizer_l:
+            self.kernel_regularizer = keras.regularizers.l2(kernel_regularizer_l)
+        else:
+            self.kernel_regularizer = None
+        if self.bn_flag:
+            self.bn_layer = keras.layers.BatchNormalization()
+        self.act_layer = keras.layers.Activation(activation=activation)
+
+    def build(self, input_shape):
+        self.weight = self.add_weight(shape=(input_shape[-1], self.units_per_split * self.num_of_splits),
+                                      initializer=self.kernel_initializer,
+                                      trainable=True)
+
+        self.bias = self.add_weight(shape=(self.units_per_split * self.num_of_splits,),
+                                    initializer=keras.initializers.Zeros(),
+                                    regularizer=self.kernel_regularizer,
+                                    trainable=True)
+        self.mask = tf.convert_to_tensor(block_diag(
+            *[np.ones(shape=[int(input_shape[-1] // self.num_of_splits), self.units_per_split]) for _ in
+              range(self.num_of_splits)]), dtype=tf.float32)
+
+    def call(self, inputs, training=True, **kwargs):
+        if self.kernel_regularizer_l is not None:
+            self.add_loss(self.kernel_regularizer_l*tf.norm(self.weight * self.mask, ord=2))
+        output = tf.matmul(inputs, self.weight * self.mask) + self.bias
+        if self.bn_flag:
+            output = self.bn_layer(output, training=training)
+        output = self.act_layer(output)
+
+        return output
 
 
 class DropOutLayer(keras.layers.Layer):

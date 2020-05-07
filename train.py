@@ -174,6 +174,8 @@ def fine_tune_gex_encoder(encoder, raw_X,
                         encoder.trainable = True
             to_train_variables.extend(shared_regressor_module.trainable_variables)
             tape.watch(to_train_variables)
+
+
             for drug in target_df.columns:
                 # model = keras.Sequential()
                 # model.add(encoder)
@@ -264,6 +266,7 @@ def fine_tune_gex_encoder(encoder, raw_X,
             validation_history['val_total']['mae'].append(total_val_mae)
             print(validation_history['val_total'][validation_monitoring_metric][-1])
             print(best_overall_metric)
+
 
             if validation_history['val_total'][validation_monitoring_metric][-1] > best_overall_metric:
                 best_overall_metric = validation_history['val_total'][validation_monitoring_metric][-1]

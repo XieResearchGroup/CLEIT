@@ -3,3 +3,4 @@ saved_weights/*
 multi-omics-data-processing/*
 *.ipynb
 figs/*.ps
+predictions/

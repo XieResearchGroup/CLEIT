@@ -39,7 +39,7 @@ def process_with_rf(train_features, y_train, cv_split_rf):
 def process_with_enet(train_features, y_train, cv_split_enet):
     try:
         # logger.debug("Training elastic net regression model")
-        alphas = np.logspace(-5, -1, num=3, endpoint=True)
+        alphas = np.logspace(-5, -1, num=5, endpoint=True)
         l1_ratios = np.array([0.1, 1, 10])
         enet = ElasticNetCV(l1_ratio=l1_ratios, alphas=alphas, cv=cv_split_enet, n_jobs=-1, verbose=2,
                             normalize=True,
@@ -55,7 +55,7 @@ def process_with_xgb(train_features, y_train, cv_split_xgb):
     try:
         xgb_tuning_parameters = {
             'learning_rate': [0.01, 0.5, 0.9],
-            'n_estimators': {50, 100, 500},
+            'n_estimators': [50, 100, 500],
             'subsample': [0.3, 0.5, 0.9]
         }
         gbm = GridSearchCV(estimator=xgb.XGBRegressor(),
@@ -174,7 +174,7 @@ if __name__ == '__main__':
             except Exception as e:
                 print(e)
 
-    mut_test_prediction_df.to_csv(os.path.join('predictions', args.target + '_' + args.method + '_mut_only' + str(
+    mut_test_prediction_df.to_csv(os.path.join('predictions', args.target + '_' + args.method + '_mut_only_' + str(
         args.propagation) + '_' + args.filter + '_prediction.csv'),
                                     index_label='Sample')
 

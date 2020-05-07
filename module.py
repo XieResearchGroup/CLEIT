@@ -36,7 +36,6 @@ class EncoderBlock(keras.Model):
         return latent_code
 
 
-
 class MLPBlock(keras.Model):
     def __init__(self, output_dim, architecture, act_fn='relu', output_act_fn=None, name='mlp',
                  kernel_regularizer_l=0.001, **kwargs):
@@ -48,6 +47,34 @@ class MLPBlock(keras.Model):
             self.intermediate_layers.append(
                 DenseLayer(units=dim, activation=act_fn, kernel_regularizer_l=kernel_regularizer_l))
         self.output_layer = keras.layers.Dense(output_dim, activation=output_act_fn)
+
+    def __repr__(self):
+        return utils.list_to_repr(self.architecture) + repr(self.output_dim)
+
+    def call(self, inputs, training=True):
+        for layer in self.intermediate_layers:
+            inputs = layer(inputs, training=training)
+        # if training is not None:
+        #    self.output_layer.trainable = training
+        result = self.output_layer(inputs)
+        return result
+
+
+class MLPBlockWithMask(keras.Model):
+    def __init__(self, output_dim, architecture, act_fn='relu', output_act_fn=None, name='mlp',
+                 kernel_regularizer_l=0.001, **kwargs):
+        super(MLPBlockWithMask, self).__init__(name=name, **kwargs)
+        self.intermediate_layers = []
+        self.architecture = architecture
+        self.output_dim = output_dim
+        self.intermediate_layers.append(
+            DenseLayer(units=architecture[0], activation=act_fn, kernel_regularizer_l=kernel_regularizer_l))
+        for dim in architecture[1:]:
+            self.intermediate_layers.append(
+                DenseLayerWithMask(num_of_splits=self.output_dim, units_per_split=dim, activation=act_fn,
+                                   kernel_regularizer_l=kernel_regularizer_l))
+        self.output_layer = DenseLayerWithMask(num_of_splits=self.output_dim, units_per_split=1,
+                                               activation=output_act_fn, bn_flag=False)
 
     def __repr__(self):
         return utils.list_to_repr(self.architecture) + repr(self.output_dim)
