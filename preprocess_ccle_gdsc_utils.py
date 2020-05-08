@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import data_config
 import string
-
+import feather
 
 def normalize_celline_names(s):
     s = s.upper()
@@ -161,7 +161,8 @@ def preprocess_ccle_mut(propagation_flag=True, mutation_dat_file=data_config.ccl
         print('Propagation Start!')
 
         #kernel = pd.read_feather(kernel_file, columns=binary_mutation_df.columns.union(['index']))
-        kernel = pd.read_feather(kernel_file)
+        #kernel = pd.read_feather(kernel_file)
+        kernel = feather.read_dataframe(kernel_file)
         kernel.set_index('index', inplace=True)
         kernel.index = [ind.decode() for ind in kernel.index]
         kernel = kernel.transpose()
