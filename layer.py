@@ -58,19 +58,20 @@ class DenseLayerWithMask(keras.layers.Layer):
         self.act_layer = keras.layers.Activation(activation=activation)
 
     def build(self, input_shape):
-        self.weight = self.add_weight(shape=(input_shape[-1], self.units_per_split * self.num_of_splits),
+        self.weight = self.add_weight(name='weight',shape=(input_shape[-1], self.units_per_split * self.num_of_splits),
                                       initializer=self.kernel_initializer,
                                       trainable=True)
 
-        self.bias = self.add_weight(shape=(self.units_per_split * self.num_of_splits,),
+        self.bias = self.add_weight(name='bias', shape=(self.units_per_split * self.num_of_splits,),
                                     initializer=keras.initializers.Zeros(),
                                     regularizer=self.kernel_regularizer,
                                     trainable=True)
-        self.mask = tf.convert_to_tensor(block_diag(
+        self.mask = tf.constant(block_diag(
             *[np.ones(shape=[int(input_shape[-1] // self.num_of_splits), self.units_per_split]) for _ in
-              range(self.num_of_splits)]), dtype=tf.float32)
+              range(self.num_of_splits)]), dtype=tf.float32, name='mask')
 
     def call(self, inputs, training=True, **kwargs):
+
         if self.kernel_regularizer_l is not None:
             self.add_loss(self.kernel_regularizer_l*tf.norm(self.weight * self.mask, ord=2))
         output = tf.matmul(inputs, self.weight * self.mask) + self.bias
@@ -79,6 +80,18 @@ class DenseLayerWithMask(keras.layers.Layer):
         output = self.act_layer(output)
 
         return output
+
+
+    def get_config(self):
+        config = super(DenseLayerWithMask, self).get_config()
+        config.update({'num_of_splits': self.num_of_splits})
+        config.update({'units_per_split': self.units_per_split})
+
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
 
 
 class DropOutLayer(keras.layers.Layer):

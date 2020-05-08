@@ -18,7 +18,7 @@ if __name__ == '__main__':
     if gpus:
         try:
             # Currently, memory growth needs to be the same across GPUs
-            #for gpu in gpus:
+            # for gpu in gpus:
             #    tf.config.experimental.set_memory_growth(gpu, True)
             tf.config.experimental.set_visible_devices(gpus[3], 'GPU')
             logical_gpus = tf.config.experimental.list_logical_devices('GPU')
@@ -43,22 +43,20 @@ if __name__ == '__main__':
 
     gex_encoder, gex_pre_train_history_df = train.pre_train_gex_AE(auto_encoder=gex_auto_encoder,
                                                                    train_dataset=train_dataset,
-                                                                   val_dataset=val_dataset,
-                                                                   max_epoch=model_config.max_epoch,
-                                                                   min_epoch=model_config.min_epoch,
-                                                                   batch_size=model_config.batch_size)
+                                                                   val_dataset=val_dataset)
+
+    i = 0
+    train_dataset = tf.data.Dataset.from_tensor_slices(
+        (data_provider.labeled_data['gex'].iloc[data_provider.get_k_folds()[i][0]].values,
+         data_provider.labeled_data['target'].iloc[data_provider.get_k_folds()[i][0]].values))
+    val_dataset = tf.data.Dataset.from_tensor_slices(
+        (data_provider.labeled_data['gex'].iloc[data_provider.get_k_folds()[i][1]].values,
+         data_provider.labeled_data['target'].iloc[data_provider.get_k_folds()[i][1]].values))
 
     gex_fine_tune_train_history, gex_fine_tune_validation_history = train.fine_tune_gex_encoder(
         encoder=gex_encoder,
-        raw_X=data_provider.labeled_data['gex'],
-        target_df=data_provider.labeled_data['target'],
-        mlp_architecture=model_config.regressor_architecture,
-        mlp_output_act_fn=model_config.regressor_act_fn,
-        max_epoch=model_config.max_epoch,
-        min_epoch=model_config.min_epoch,
-        gradual_unfreezing_flag=model_config.gradual_unfreezing_flag,
-        unfrozen_epoch=model_config.unfrozen_epoch
-    )
+        train_dataset=train_dataset,
+        val_dataset=val_dataset)
 
     train_dataset = tf.data.Dataset.from_tensor_slices(
         (data_provider.unlabeled_data['mut'].loc[data_provider.matched_index].values,
@@ -81,29 +79,21 @@ if __name__ == '__main__':
                                                                    reference_encoder=gex_encoder,
                                                                    train_dataset=train_dataset,
                                                                    val_dataset=val_dataset,
-                                                                   max_epoch=model_config.max_epoch,
-                                                                   min_epoch=model_config.min_epoch,
-                                                                   batch_size=model_config.batch_size,
                                                                    transmission_loss_fn=loss.contrastive_loss,
-                                                                   alpha=model_config.alpha
                                                                    )
     # # mut_encoder, mut_pre_train_history_df = train.pre_train_mut_AE(mut_auto_encoder, reference_encoder=gex_encoder, train_dataset=train_dataset, val_dataset=val_dataset,transmission_loss_fn=loss.mmd_loss)
     # # mut_encoder, mut_pre_train_history_df = train.pre_train_mut_AE_with_GAN(mut_auto_encoder, reference_encoder=gex_encoder, train_dataset=train_dataset, val_dataset=val_dataset)
-    #
+    train_dataset = tf.data.Dataset.from_tensor_slices(
+        (data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][0]].values,
+         data_provider.labeled_data['target'].iloc[data_provider.get_k_folds()[i][0]].values))
+    val_dataset = tf.data.Dataset.from_tensor_slices(
+        (data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][1]].values,
+         data_provider.labeled_data['target'].iloc[data_provider.get_k_folds()[i][1]].values))
+
     mut_fine_tune_train_history, mut_fine_tune_validation_history = train.fine_tune_mut_encoder(
         encoder=mut_encoder,
-        reference_encoder=gex_encoder,
-        target_df=data_provider.labeled_data['target'],
-        raw_X=data_provider.labeled_data['mut'],
-        raw_reference_X=data_provider.labeled_data['gex'],
-        mlp_architecture=model_config.regressor_architecture,
-        mlp_output_act_fn=model_config.regressor_act_fn,
-        max_epoch=model_config.max_epoch,
-        min_epoch=model_config.min_epoch,
-        gradual_unfreezing_flag=model_config.gradual_unfreezing_flag,
-        unfrozen_epoch=model_config.unfrozen_epoch,
-        transmission_loss_fn=loss.contrastive_loss,
-        alpha=model_config.alpha
+        train_dataset=train_dataset,
+        val_dataset=val_dataset
     )
 
     # mut_fine_tune_train_history, mut_fine_tune_validation_history = train.fine_tune_mut_encoder(
@@ -124,6 +114,3 @@ if __name__ == '__main__':
         pickle.dump(mut_pre_train_history_df)
         pickle.dump(mut_fine_tune_train_history)
         pickle.dump(mut_fine_tune_validation_history)
-
-
-

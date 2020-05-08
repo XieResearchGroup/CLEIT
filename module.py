@@ -61,15 +61,20 @@ class MLPBlock(keras.Model):
 
 
 class MLPBlockWithMask(keras.Model):
-    def __init__(self, output_dim, architecture, act_fn='relu', output_act_fn=None, name='mlp',
+    def __init__(self, output_dim, architecture, shared_layer_num=1, act_fn='relu', output_act_fn=None, name='mlp',
                  kernel_regularizer_l=0.001, **kwargs):
         super(MLPBlockWithMask, self).__init__(name=name, **kwargs)
         self.intermediate_layers = []
         self.architecture = architecture
         self.output_dim = output_dim
+        self.shared_layer_num = shared_layer_num
+
+        for dim in architecture[:shared_layer_num]:
+            self.intermediate_layers.append(
+                DenseLayer(units=dim, activation=act_fn, kernel_regularizer_l=kernel_regularizer_l))
         self.intermediate_layers.append(
-            DenseLayer(units=architecture[0], activation=act_fn, kernel_regularizer_l=kernel_regularizer_l))
-        for dim in architecture[1:]:
+            DenseLayer(units=architecture[shared_layer_num]*output_dim, activation=act_fn, kernel_regularizer_l=kernel_regularizer_l))
+        for dim in architecture[shared_layer_num+1:]:
             self.intermediate_layers.append(
                 DenseLayerWithMask(num_of_splits=self.output_dim, units_per_split=dim, activation=act_fn,
                                    kernel_regularizer_l=kernel_regularizer_l))
