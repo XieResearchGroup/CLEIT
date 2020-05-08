@@ -97,7 +97,7 @@ class DataProvider:
             xena_mut_dat, mut_dat = align_feature(xena_mut_dat, mut_dat)
 
         elif self.feature_filter is not None:
-            feature_list = pd.read_csv(data_config.gene_feature_file, sep='\t', header=None).iloc[:, 0].to_list()
+            feature_list = pd.read_csv(data_config.gene_feature_file, sep='\t', header=None).iloc[:, 0].values.tolist()
             xena_gex_dat = preprocess_xena_utils.preprocess_gex_df(df=xena_gex_dat, feature_list=feature_list)
             xena_gex_dat, gex_dat = align_feature(xena_gex_dat, gex_dat)
             mut_genes_to_keep = list(set(xena_mut_dat.columns.tolist()) & set(feature_list))
