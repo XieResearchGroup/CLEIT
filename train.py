@@ -22,9 +22,9 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
     val_dataset = val_dataset.batch(batch_size)
 
     train_mse_metric = keras.metrics.MeanSquaredError()
-    train_mae_metric = keras.metrics.MeanAbsolutePercentageError()
+    train_mae_metric = keras.metrics.MeanAbsoluteError()
     val_mse_metric = keras.metrics.MeanSquaredError()
-    val_mae_metric = keras.metrics.MeanAbsolutePercentageError()
+    val_mae_metric = keras.metrics.MeanAbsoluteError()
 
     train_mse_list = []
     train_mae_list = []
@@ -204,7 +204,7 @@ def fine_tune_gex_encoder(encoder,
                     regressor_tuning_flag = True
                 grads = tape.gradient(loss_value, to_train_variables)
                 optimizer.apply_gradients(zip(grads, to_train_variables))
-                counts += 1
+                counts += 1.
 
             # for drug in target_df.columns:
             #     # model = keras.Sequential()
@@ -317,7 +317,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
         total_train_loss = 0.
         total_train_steps = 0
         total_val_loss = 0.
-        total_val_steps = 0
+        total_val_steps = 0.
         print('epoch: ', epoch)
         for step, (x_batch_train, y_batch_train, reference_x_batch_train) in enumerate(train_dataset):
             total_train_steps += 1
@@ -352,7 +352,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
                 encoded_X_val = auto_encoder.encoder(x_batch_val, training=False)
                 reference_encoded_x_val = reference_encoder(reference_x_batch_val, training=False)
             val_preds = auto_encoder(x_batch_val, training=False)
-            val_loss_value = loss_fn(y_batch_val, val_preds)
+            val_loss_value = (1-alpha)*loss_fn(y_batch_val, val_preds)
             val_loss_value += alpha * transmission_loss_fn(reference_encoded_x_val, encoded_X_val)
             total_val_loss += val_loss_value
         val_loss_history.append(total_val_loss / float(total_val_steps))

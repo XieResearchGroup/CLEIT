@@ -59,14 +59,16 @@ if __name__ == '__main__':
         val_dataset=val_dataset)
 
     train_dataset = tf.data.Dataset.from_tensor_slices(
-        (data_provider.unlabeled_data['mut'].loc[data_provider.matched_index].values,
-         data_provider.unlabeled_data['mut'].loc[data_provider.matched_index].values,
-         data_provider.unlabeled_data['gex'].loc[data_provider.matched_index].values))
+        (data_provider.unlabeled_data['mut'].loc[data_provider.matched_index].append(data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][0]]).values,
+         data_provider.unlabeled_data['mut'].loc[data_provider.matched_index].append(data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][0]]).values,
+         data_provider.unlabeled_data['gex'].loc[data_provider.matched_index].append(data_provider.labeled_data['gex'].iloc[data_provider.get_k_folds()[i][0]]).values))
+
+
 
     val_dataset = tf.data.Dataset.from_tensor_slices(
-        (data_provider.labeled_data['mut'].values,
-         data_provider.labeled_data['mut'].values,
-         data_provider.labeled_data['gex'].values))
+        (data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][1]].values,
+         data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][1]].values,
+         data_provider.labeled_data['gex'].iloc[data_provider.get_k_folds()[i][1]].values))
 
     mut_auto_encoder = VAE(latent_dim=model_config.encoder_latent_dimension,
                            output_dim=data_provider.shape_dict['mut'],
