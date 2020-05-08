@@ -20,7 +20,7 @@ if __name__ == '__main__':
             # Currently, memory growth needs to be the same across GPUs
             # for gpu in gpus:
             #    tf.config.experimental.set_memory_growth(gpu, True)
-            tf.config.experimental.set_visible_devices(gpus[0], 'GPU')
+            tf.config.experimental.set_visible_devices(gpus[1], 'GPU')
             logical_gpus = tf.config.experimental.list_logical_devices('GPU')
             print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
         except RuntimeError as e:
@@ -81,7 +81,7 @@ if __name__ == '__main__':
                                                                    reference_encoder=gex_encoder,
                                                                    train_dataset=train_dataset,
                                                                    val_dataset=val_dataset,
-                                                                   transmission_loss_fn=loss.contrastive_loss,
+                                                                   transmission_loss_fn=loss.mmd_loss,
                                                                    )
     # # mut_encoder, mut_pre_train_history_df = train.pre_train_mut_AE(mut_auto_encoder, reference_encoder=gex_encoder, train_dataset=train_dataset, val_dataset=val_dataset,transmission_loss_fn=loss.mmd_loss)
     # # mut_encoder, mut_pre_train_history_df = train.pre_train_mut_AE_with_GAN(mut_auto_encoder, reference_encoder=gex_encoder, train_dataset=train_dataset, val_dataset=val_dataset)
