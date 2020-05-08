@@ -55,12 +55,12 @@ def preprocess_target_data(score='AUC', output_file_path=None):
     #keep only tcga classified samples
 
     ccle_sample_info = pd.read_csv(data_config.ccle_sample_file, index_col=4)
-    ccle_sample_info.index = ccle_sample_info.index.astype(pd.Int32Dtype())
     ccle_sample_info = ccle_sample_info.loc[ccle_sample_info.index.dropna()]
+    ccle_sample_info.index = ccle_sample_info.index.astype('int')
 
     gdsc_sample_info = pd.read_csv(data_config.gdsc_sample_file, header=0, index_col=1)
-    gdsc_sample_info.index = gdsc_sample_info.index.astype(pd.Int32Dtype())
     gdsc_sample_info = gdsc_sample_info.loc[gdsc_sample_info.index.dropna()]
+    gdsc_sample_info.index = gdsc_sample_info.index.astype('int')
     gdsc_sample_info = gdsc_sample_info.loc[gdsc_sample_info.iloc[:, 8].dropna().index]
 
     gdsc_sample_mapping = gdsc_sample_info.merge(ccle_sample_info, left_index=True, right_index=True, how='inner')[
