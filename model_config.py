@@ -8,7 +8,11 @@ regressor_shared_layer_number = 2
 regressor_act_fn = keras.activations.relu
 regressor_output_dim = 265
 regressor_output_act_fn =keras.activations.sigmoid
-
+#transmitter module configurations
+transmitter_architecture = [128, 128]
+transmitter_act_fn = keras.activations.relu
+transmitter_output_act_fn = None
+transmitter_output_dim = encoder_latent_dimension
 #learning configurations
 kernel_regularizer_l = 0.0001
 pre_training_lr = 1e-4

@@ -60,9 +60,10 @@ def process_with_xgb(train_features, y_train, cv_split_xgb):
         }
         gbm = GridSearchCV(estimator=xgb.XGBRegressor(),
                            param_grid=xgb_tuning_parameters,
-                           scoring='neg_mean_squared_error',
+                           scoring='reg:squarederror',
                            cv=cv_split_xgb,
-                           verbose=2)
+                           verbose=2,
+                           n_jobs=-1)
         gbm.fit(train_features, y_train)
         return gbm
     except Exception as e:
@@ -99,6 +100,7 @@ if __name__ == '__main__':
                                       omics=['gex', 'mut'])
     data_provider.labeled_data['gex'].columns = data_provider.labeled_data['gex'].columns + '_gex'
     data_provider.labeled_data['mut'].columns = data_provider.labeled_data['mut'].columns + '_mut'
+    data_provider.labeled_test_data['mut'].columns = data_provider.labeled_test_data['mut'].columns + '_mut'
 
     mut_test_prediction_df = pd.DataFrame(np.full_like(data_provider.labeled_test_data['target'], fill_value=-1),
                                      index=data_provider.labeled_test_data['target'].index,
@@ -178,9 +180,9 @@ if __name__ == '__main__':
         args.propagation) + '_' + args.filter + '_prediction.csv'),
                                     index_label='Sample')
 
-    overlapped_prediction_df.to_csv(os.path.join('predictions', args.target + '_' + args.method + '_both_' + str(
-        args.propagation) + '_' + args.filter + '_multi_regression_5fold_prediction.csv'),
-                                    index_label='Sample')
+    # overlapped_prediction_df.to_csv(os.path.join('predictions', args.target + '_' + args.method + '_both_' + str(
+    #     args.propagation) + '_' + args.filter + '_multi_regression_5fold_prediction.csv'),
+    #                                 index_label='Sample')
 
     gex_prediction_df.to_csv(os.path.join('predictions', args.target + '_' + args.method + '_gex_' + str(
         args.propagation) + '_' + args.filter + '_multi_regression_5fold_prediction.csv'),

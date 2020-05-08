@@ -122,6 +122,8 @@ def fine_tune_gex_encoder(encoder,
     validation_history = defaultdict(list)
 
     free_layers = len(encoder.layers)
+    if repr(encoder).startswith('stochastic'):
+        free_layers -=1
 
     if gradual_unfreezing_flag:
         encoder.trainable = False
@@ -160,8 +162,7 @@ def fine_tune_gex_encoder(encoder,
         # total_val_mae = 0.
         to_train_variables = encoder.trainable_variables
         if gradual_unfreezing_flag:
-            if epoch > min_epoch:
-                free_layers -= 1
+            if epoch >= min_epoch:
                 if (epoch - min_epoch) % unfrozen_epoch == 0:
                     free_layers -= 1
                     lr *= model_config.decay
@@ -291,6 +292,7 @@ def fine_tune_gex_encoder(encoder,
 
 def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset,
                      transmission_loss_fn,
+                     transmitter_flag = False,
                      alpha=model_config.alpha,
                      batch_size=model_config.batch_size,
                      optimizer=keras.optimizers.Adam(learning_rate=model_config.pre_training_lr),
@@ -313,6 +315,13 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
     reference_encoder.trainable = False
 
 
+    if transmitter_flag:
+        transmitter = module.MLPBlock(architecture=model_config.transmitter_architecture,
+                                      act_fn=module_config.transmitter_act_fn,
+                                      output_act_fn=model_config.transmitter_output_act_fn,
+                                      output_dim=transmitter_output_dim)
+
+
     for epoch in range(max_epoch):
         total_train_loss = 0.
         total_train_steps = 0
@@ -331,12 +340,20 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
 
                 preds = auto_encoder(x_batch_train, training=True)
                 loss_value = (1-alpha)*loss_fn(y_batch_train, preds)
-                loss_value += alpha * transmission_loss_fn(reference_encoded_x, encoded_X)
+                if transmitter_flag:
+                    loss_value += alpha * transmission_loss_fn(reference_encoded_x, transmitter(encoded_X))
+                else:
+                    loss_value += alpha * transmission_loss_fn(reference_encoded_x, encoded_X)
+
                 total_train_loss += loss_value
                 loss_value += sum(auto_encoder.losses)
-
-                grads = tape.gradient(loss_value, auto_encoder.trainable_variables)
-                optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables))
+                if transmitter_flag:
+                    loss_value += sum(transmitter.losses)
+                    grads = tape.gradient(loss_value, auto_encoder.trainable_variables+transmitter.trainable_variables)
+                    optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables+transmitter.trainable_variables))
+                else:
+                    grads = tape.gradient(loss_value, auto_encoder.trainable_variables)
+                    optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables))
 
             if (step + 1) % 100 == 0:
                 print('Training loss (for one batch) at step %s: %s' % (step + 1, float(loss_value)))
@@ -353,13 +370,19 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
                 reference_encoded_x_val = reference_encoder(reference_x_batch_val, training=False)
             val_preds = auto_encoder(x_batch_val, training=False)
             val_loss_value = (1-alpha)*loss_fn(y_batch_val, val_preds)
-            val_loss_value += alpha * transmission_loss_fn(reference_encoded_x_val, encoded_X_val)
+            if transmitter_flag:
+                val_loss_value += alpha * transmission_loss_fn(reference_encoded_x_val, transmitter(encoded_X_val))
+            else:
+                val_loss_value += alpha * transmission_loss_fn(reference_encoded_x_val, encoded_X_val)
             total_val_loss += val_loss_value
         val_loss_history.append(total_val_loss / float(total_val_steps))
 
         if val_loss_history[-1] < best_val_loss:
             auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
                                               save_format='tf')
+            if transmitter_flag:
+                transmitter.save_weights(os.path.join(output_folder, 'pre_trained_transmitter_weights'),
+                                                  save_format='tf')
             if val_loss_history[-1] + diff_threshold < best_val_loss:
                 tolerance_count = 0
             else:
@@ -519,6 +542,7 @@ def fine_tune_mut_encoder(encoder, train_dataset,
                           regressor_act_fn = model_config.regressor_act_fn,
                           regressor_output_dim = model_config.regressor_output_dim,
                           regressor_output_act_fn = model_config.regressor_output_act_fn,
+                          transmitter_flag=False,
                           loss_fn=penalized_mean_squared_error,
                           validation_monitoring_metric='pearson',
                           max_epoch=model_config.max_epoch,
@@ -540,10 +564,15 @@ def fine_tune_mut_encoder(encoder, train_dataset,
     training_history = defaultdict(list)
     validation_history = defaultdict(list)
 
-    free_layers = len(encoder.layers)
+    free_encoder_layers = len(encoder.layers)
+    if repr(encoder).startswith('stochastic'):
+        free_encoder_layers -=1
+
 
     if gradual_unfreezing_flag:
         encoder.trainable = False
+
+
 
     regressor = module.MLPBlockWithMask(architecture=regressor_mlp_architecture,
                                         shared_layer_num=regressor_shared_layer_num,
@@ -552,22 +581,44 @@ def fine_tune_mut_encoder(encoder, train_dataset,
                                         output_dim=regressor_output_dim)
 
     regressor.load_weights(os.path.join(reference_folder, 'regressor_weights'))
+
+    if transmitter_flag:
+        transmitter = module.MLPBlock(architecture=model_config.transmitter_architecture,
+                                      act_fn=module_config.transmitter_act_fn,
+                                      output_act_fn=model_config.transmitter_output_act_fn,
+                                      output_dim=transmitter_output_dim)
+        transmitter.load_weights(os.path.join(output_folder, 'pre_trained_transmitter_weights'))
+        if gradual_unfreezing_flag:
+            transmitter.trainable = False
+        free_transmitter_layers = len(transmitter.layers)
+
     lr = model_config.fine_tuning_lr
     regressor_tuning_flag = False
 
     for epoch in range(max_epoch):
         to_train_variables = encoder.trainable_variables
+        if transmitter_flag:
+            to_train_variables.extend(transmitter.trainable_variables)
+
         if gradual_unfreezing_flag:
-            if epoch > min_epoch:
-                free_layers -= 1
-                if (epoch - min_epoch) % unfrozen_epoch == 0:
-                    free_layers -= 1
-                    lr *= model_config.decay
-                for i in range(len(encoder.layers) - 1, free_layers - 1, -1):
-                    to_train_variables.extend(encoder.layers[i].trainable_variables)
-                if free_layers <= 0:
-                    gradual_unfreezing_flag = False
-                    encoder.trainable = True
+            if epoch >= min_epoch:
+                if transmitter_flag and free_transmitter_layers > 0:
+                    if (epoch - min_epoch) % unfrozen_epoch == 0:
+                        free_transmitter_layers -= 1
+                        lr *= model_config.decay
+                    for i in range(len(transmitter.layers) - 1, free_transmitter_layers - 1, -1):
+                        to_train_variables.extend(transmitter.layers[i].trainable_variables)
+                    if free_transmitter_layers <= 0:
+                        transmitter.trainable = True
+                else:
+                    if (epoch - min_epoch) % unfrozen_epoch == 0:
+                        free_encoder_layers -= 1
+                        lr *= model_config.decay
+                    for i in range(len(encoder.layers) - 1, free_encoder_layers - 1, -1):
+                        to_train_variables.extend(encoder.layers[i].trainable_variables)
+                    if free_encoder_layers <= 0:
+                        gradual_unfreezing_flag = False
+                        encoder.trainable = True
 
         train_epoch_loss = 0.
         train_epoch_pearson = 0.
@@ -585,6 +636,9 @@ def fine_tune_mut_encoder(encoder, train_dataset,
                 else:
                     encoded_X = encoder(x_batch_train, training=True)
 
+                if transmitter_flag:
+                    encoded_X = transmitter(encoded_X, training=True)
+
                 preds = regressor(encoded_X, training=True)
                 loss_value = loss_fn(y_pred=preds, y_true=y_batch_train)
                 train_epoch_loss += loss_value
@@ -595,6 +649,9 @@ def fine_tune_mut_encoder(encoder, train_dataset,
 
                 loss_value += sum(encoder.losses)
                 loss_value += sum(regressor.losses)
+                if transmitter_flag:
+                    loss_value += sum(transmitter.losses)
+
                 if not regressor_tuning_flag:
                     to_train_variables.extend(regressor.trainable_variables)
                     regressor_tuning_flag = True
@@ -624,8 +681,11 @@ def fine_tune_mut_encoder(encoder, train_dataset,
                 encoded_val_X = encoder(x_batch_val, training=False)[0]
             else:
                 encoded_val_X = encoder(x_batch_val, training=False)
-            val_preds = regressor(encoded_val_X, training=False)
 
+            if transmitter_flag:
+                encoded_val_X = transmitter(encoded_val_X, training=False)
+
+            val_preds = regressor(encoded_val_X, training=False)
             val_loss_value = loss_fn(y_pred=val_preds, y_true=y_batch_val)
             val_epoch_loss += val_loss_value
             val_epoch_pearson += pearson_correlation(y_pred=val_preds, y_true=y_batch_val)
@@ -644,6 +704,8 @@ def fine_tune_mut_encoder(encoder, train_dataset,
             best_overall_metric = validation_history[validation_monitoring_metric][-1]
             encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
             regressor.save_weights(os.path.join(output_folder, 'regressor_weights'), save_format='tf')
+            if transmitter_flag:
+                transmitter.save_weights(os.path.join(output_folder, 'fine_tuned_transmitter_weights'), save_format='tf')
 
     return training_history, validation_history
 
