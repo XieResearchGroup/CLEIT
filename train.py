@@ -471,7 +471,7 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
 
     gp_optimizer = keras.optimizers.RMSprop()
 
-    for epoch in range(max_epoch * n_critic):
+    for epoch in range(max_epoch):
         total_train_loss = 0.
         total_train_gen_loss = 0.
         total_train_steps = 0

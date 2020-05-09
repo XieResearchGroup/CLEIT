@@ -24,5 +24,5 @@ gradual_unfreezing_flag = True
 unfrozen_epoch = 100
 batch_size = 64
 alpha = 0.5
-gradient_threshold = 1e-4
+gradient_threshold = None
 

@@ -81,10 +81,22 @@ if __name__ == '__main__':
                                                                    reference_encoder=gex_encoder,
                                                                    train_dataset=train_dataset,
                                                                    val_dataset=val_dataset,
-                                                                   transmission_loss_fn=loss.mmd_loss,
+                                                                   transmission_loss_fn=loss.contrastive_loss,
                                                                    )
-    # # mut_encoder, mut_pre_train_history_df = train.pre_train_mut_AE(mut_auto_encoder, reference_encoder=gex_encoder, train_dataset=train_dataset, val_dataset=val_dataset,transmission_loss_fn=loss.mmd_loss)
-    # # mut_encoder, mut_pre_train_history_df = train.pre_train_mut_AE_with_GAN(mut_auto_encoder, reference_encoder=gex_encoder, train_dataset=train_dataset, val_dataset=val_dataset)
+
+    # mut_encoder, mut_pre_train_history_df = train.pre_train_mut_AE(auto_encoder=mut_auto_encoder,
+    #                                                                reference_encoder=gex_encoder,
+    #                                                                train_dataset=train_dataset,
+    #                                                                val_dataset=val_dataset,
+    #                                                                transmission_loss_fn=loss.mmd_loss,
+    #                                                                )
+    mut_encoder, mut_pre_train_history_df = train.pre_train_mut_AE_with_GAN(auto_encoder=mut_auto_encoder,
+                                                                   reference_encoder=gex_encoder,
+                                                                   train_dataset=train_dataset,
+                                                                   val_dataset=val_dataset,
+                                                                   )
+
+
     train_dataset = tf.data.Dataset.from_tensor_slices(
         (data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][0]].values,
          data_provider.labeled_data['target'].iloc[data_provider.get_k_folds()[i][0]].values))
