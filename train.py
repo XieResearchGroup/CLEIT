@@ -491,7 +491,11 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
                     reference_encoded_x = reference_encoder(reference_x_batch_train, training=False)
 
                 critic_real = critic(reference_encoded_x)
-                critic_fake = critic(encoded_X)
+                if transmitter_flag:
+                    critic_fake = critic(transmitter(encoded_X))
+                else:
+                    critic_fake = critic(encoded_X)
+
                 critic_loss = tf.reduce_mean(critic_fake - critic_real, axis=0)
                 total_train_loss += critic_loss
 
@@ -513,19 +517,24 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
                     preds = auto_encoder(x_batch_train, training=True)
                     loss_value = (1 - alpha) * loss_fn(y_batch_train, preds)
                     loss_value -= alpha * tf.reduce_mean(critic_fake, axis=0)
-                    loss_value += sum(auto_encoder.losses)
+
                     total_train_gen_loss -= tf.reduce_mean(critic_fake, axis=0)
 
-                    grads = tape.gradient(loss_value, auto_encoder.trainable_variables)
-                    optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables))
+                    loss_value += sum(auto_encoder.losses)
+                    if transmitter_flag:
+                        loss_value += sum(transmitter.losses)
+                        grads = tape.gradient(loss_value, auto_encoder.trainable_variables+transmitter.trainable_variables)
+                        optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables+transmitter.trainable_variables))
+                    else:
+                        grads = tape.gradient(loss_value, auto_encoder.trainable_variables)
+                        optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables))
 
             if (step + 1) % 100 == 0:
                 print('Training loss (for one batch) at step %s: %s' % (step + 1, float(loss_value)))
                 print('Seen so far: %s samples' % ((step + 1) * batch_size))
 
         train_loss_history.append(total_train_loss / float(total_train_steps))
-        if (epoch + 1) % n_critic == 0:
-            train_gen_loss_history.append(total_train_gen_loss / float(total_train_steps))
+        train_gen_loss_history.append(total_train_gen_loss / float(total_train_steps//n_critic))
 
         for step, (x_batch_val, y_batch_val, reference_x_batch_val) in enumerate(val_dataset):
             total_val_steps += 1
@@ -535,7 +544,11 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
             else:
                 encoded_X_val = auto_encoder.encoder(x_batch_val, training=False)
                 reference_encoded_x_val = reference_encoder(reference_x_batch_val, training=False)
-            critic_val_fake = critic(encoded_X_val)
+            if transmitter_flag:
+                critic_val_fake = critic(transmitter(encoded_X_val))
+            else:
+                critic_val_fake = critic(encoded_X_val)
+
             critic_val_real = critic(reference_encoded_x_val)
             critic_val_loss = tf.reduce_mean(critic_val_fake - critic_val_real, axis=0)
 
@@ -543,15 +556,16 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
             # val_loss_value = loss_fn(y_batch_val, val_preds)
             # val_loss_value -= alpha * critic_val_fake
             total_val_loss += critic_val_loss
-            if (epoch + 1) % n_critic == 0:
-                total_val_gen_loss -= tf.reduce_mean(critic_val_fake, axis=0)
+            total_val_gen_loss -= tf.reduce_mean(critic_val_fake, axis=0)
         val_loss_history.append(total_val_loss / float(total_val_steps))
-        if (epoch + 1) % n_critic == 0:
-            val_gen_loss_history.append(total_val_gen_loss / float(total_val_steps))
+        val_gen_loss_history.append(total_val_gen_loss / float(total_val_steps))
 
         if val_loss_history[-1] < best_val_loss:
             auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
                                               save_format='tf')
+            if transmitter_flag:
+                transmitter.save_weights(os.path.join(output_folder, 'pre_trained_transmitter_weights'),
+                                         save_format='tf')
             if val_loss_history[-1] + diff_threshold < best_val_loss:
                 tolerance_count = 0
             else:
@@ -562,6 +576,10 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
 
         if epoch < min_epoch:
             tolerance_count = 0
+        if gradient_threshold is not None:
+            if grad_norm < gradient_threshold:
+                auto_encoder.encoder.load_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'))
+                break
         else:
             if tolerance_count > tolerance:
                 auto_encoder.encoder.load_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'))

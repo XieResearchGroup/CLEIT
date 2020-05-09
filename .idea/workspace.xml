@@ -3,8 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="24740e00-0746-4525-a150-b7e4a54c424b" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/model_config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/train.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -125,7 +123,7 @@
       <workItem from="1588039287697" duration="5678000" />
       <workItem from="1588357420444" duration="26726000" />
       <workItem from="1588868479841" duration="57000" />
-      <workItem from="1588868568042" duration="30225000" />
+      <workItem from="1588868568042" duration="31418000" />
     </task>
     <servers />
   </component>
@@ -182,9 +180,10 @@
       <screen x="-2560" y="0" width="2560" height="1440" />
     </state>
     <state x="-1433" y="518" key="refactoring.ChangeSignatureDialog/0.23.1280.777/-2560.0.2560.1440@-2560.0.2560.1440" timestamp="1587674935147" />
-    <state x="305" y="124" width="670" height="676" key="search.everywhere.popup" timestamp="1586666179088">
-      <screen x="0" y="0" width="1280" height="800" />
+    <state x="-1950" y="243" width="1340" height="1198" key="search.everywhere.popup" timestamp="1589046400379">
+      <screen x="-2560" y="23" width="2560" height="1417" />
     </state>
     <state x="305" y="124" width="670" height="676" key="search.everywhere.popup/0.0.1280.800/-2560.0.2560.1440@0.0.1280.800" timestamp="1586666179088" />
+    <state x="-1950" y="243" width="1340" height="1198" key="search.everywhere.popup/0.23.1280.734/-2560.23.2560.1417@-2560.23.2560.1417" timestamp="1589046400379" />
   </component>
 </project>
