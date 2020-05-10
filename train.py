@@ -119,9 +119,10 @@ def fine_tune_gex_encoder(encoder,
                           min_epoch=model_config.min_epoch,
                           gradual_unfreezing_flag=model_config.gradual_unfreezing_flag,
                           unfrozen_epoch=model_config.unfrozen_epoch,
-                          gradient_threshold=model_config.gradient_threshold
+                          gradient_threshold=model_config.gradient_threshold,
+                          exp_type='cv'
                           ):
-    output_folder = os.path.join('saved_weights', 'gex', repr(encoder) + '_encoder_weights')
+    output_folder = os.path.join('saved_weights', 'gex', exp_type, repr(encoder) + '_encoder_weights')
     safe_make_dir(output_folder)
 
     best_overall_metric = float('-inf')
@@ -136,8 +137,7 @@ def fine_tune_gex_encoder(encoder,
     if repr(encoder).startswith('stochastic'):
         free_layers -= 1
 
-    if gradual_unfreezing_flag:
-        encoder.trainable = False
+    encoder.trainable = False
     # shared_regressor_module = module.MLPBlock(architecture=model_config.shared_regressor_architecture,
     #                                           output_act_fn=model_config.shared_regressor_act_fn,
     #                                           output_dim=model_config.shared_regressor_output_dim,
@@ -317,10 +317,11 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
                      loss_fn=keras.losses.MeanSquaredError(),
                      min_epoch=model_config.min_epoch,
                      max_epoch=model_config.max_epoch,
-                     tolerance=50,
+                     tolerance=10,
                      diff_threshold=1e-2,
-                     gradient_threshold=model_config.gradient_threshold):
-    output_folder = os.path.join('saved_weights', 'mut', repr(auto_encoder.encoder) + '_encoder_weights')
+                     gradient_threshold=model_config.gradient_threshold,
+                     exp_type='cv'):
+    output_folder = os.path.join('saved_weights', 'mut', exp_type, repr(auto_encoder.encoder) + '_encoder_weights')
     safe_make_dir(output_folder)
 
     train_dataset = train_dataset.shuffle(buffer_size=1024).batch(batch_size)
@@ -442,10 +443,11 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
                               n_critic=5,
                               tolerance=10,
                               diff_threshold=1e-2,
-                              gradient_threshold=model_config.gradient_threshold):
+                              gradient_threshold=model_config.gradient_threshold,
+                              exp_type='cv'):
     # track validation critic loss
 
-    output_folder = os.path.join('saved_weights', 'mut', repr(auto_encoder.encoder) + '_encoder_weights')
+    output_folder = os.path.join('saved_weights', 'mut', exp_type, repr(auto_encoder.encoder) + '_encoder_weights')
     safe_make_dir(output_folder)
 
     critic = module.Critic(architecture=[128, 64, 32], output_dim=1)
@@ -607,10 +609,11 @@ def fine_tune_mut_encoder(encoder, train_dataset,
                           min_epoch=model_config.min_epoch,
                           gradual_unfreezing_flag=model_config.gradual_unfreezing_flag,
                           unfrozen_epoch=model_config.unfrozen_epoch,
-                          gradient_threshold=model_config.gradient_threshold
+                          gradient_threshold=model_config.gradient_threshold,
+                          exp_type='cv'
                           ):
-    output_folder = os.path.join('saved_weights', 'mut', repr(encoder) + '_encoder_weights')
-    reference_folder = os.path.join('saved_weights', 'gex', repr(encoder) + '_encoder_weights')
+    output_folder = os.path.join('saved_weights', 'mut', exp_type, repr(encoder) + '_encoder_weights')
+    reference_folder = os.path.join('saved_weights', 'gex', exp_type, repr(encoder) + '_encoder_weights')
 
     safe_make_dir(output_folder)
 

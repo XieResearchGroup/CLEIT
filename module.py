@@ -138,11 +138,13 @@ class AE(keras.Model):
 
 
 class VAE(keras.Model):
-    def __init__(self, latent_dim, output_dim, architecture, output_act_fn=None, kernel_regularizer_l=0.001,
+    #beta VAE
+    def __init__(self, latent_dim, output_dim, architecture, output_act_fn=None, beta=1.0, kernel_regularizer_l=0.001,
                  noise_fn=None, name='ae', **kwargs):
         super(VAE, self).__init__(name=name, **kwargs)
         if noise_fn is not None:
             self.noise_layer = noise_fn(0.005)
+        self.beta = beta
         self.encoder = EncoderBlock(latent_dim=latent_dim, architecture=architecture, output_act_fn=output_act_fn,
                                     kernel_regularizer_l=kernel_regularizer_l,
                                     stochastic_flag=True)
@@ -160,6 +162,6 @@ class VAE(keras.Model):
 
         kl_loss = -0.5 * tf.reduce_sum(
             latent_log_var - tf.square(latent_mean) - tf.exp(latent_log_var) + 1)
-        self.add_loss(kl_loss)
+        self.add_loss(self.beta * kl_loss)
 
         return output

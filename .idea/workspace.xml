@@ -3,7 +3,12 @@
   <component name="ChangeListManager">
     <list default="true" id="24740e00-0746-4525-a150-b7e4a54c424b" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ipynb_checkpoints/test-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/.ipynb_checkpoints/test-checkpoint.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CLRN_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/CLRN_main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data.py" beforeDir="false" afterPath="$PROJECT_DIR$/data.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/module.py" beforeDir="false" afterPath="$PROJECT_DIR$/module.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/run.py" beforeDir="false" afterPath="$PROJECT_DIR$/run.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/train.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -123,7 +128,7 @@
       <workItem from="1588039287697" duration="5678000" />
       <workItem from="1588357420444" duration="26726000" />
       <workItem from="1588868479841" duration="57000" />
-      <workItem from="1588868568042" duration="37127000" />
+      <workItem from="1588868568042" duration="41601000" />
     </task>
     <servers />
   </component>
@@ -171,11 +176,13 @@
     <state x="317" y="222" key="com.intellij.ide.util.TipDialog/0.0.1280.800/-2560.0.2560.1440@0.0.1280.800" timestamp="1587664837710" />
     <state x="317" y="222" key="com.intellij.ide.util.TipDialog/0.0.1280.800@0.0.1280.800" timestamp="1586557188599" />
     <state x="317" y="222" key="com.intellij.ide.util.TipDialog/0.23.1280.734@0.23.1280.734" timestamp="1585515267773" />
-    <state x="-2471" y="3" width="2441" height="1375" maximized="true" key="dock-window-1" timestamp="1588036312141">
-      <screen x="-2560" y="0" width="2560" height="1440" />
+    <state x="0" y="0" width="1280" height="800" key="dock-window-1" timestamp="1589141057327">
+      <screen x="0" y="23" width="1280" height="734" />
     </state>
     <state x="-2471" y="3" width="2441" height="1375" maximized="true" key="dock-window-1/0.0.1280.800/-2560.0.2560.1440@-2560.0.2560.1440" timestamp="1588036312141" />
+    <state x="0" y="0" width="502" height="800" maximized="true" key="dock-window-1/0.0.1280.800@0.0.1280.800" timestamp="1589140358612" />
     <state x="0" y="23" width="1280" height="734" maximized="true" key="dock-window-1/0.23.1280.734/-2560.0.2560.1440@-2560.0.2560.1440" timestamp="1588033659332" />
+    <state x="0" y="0" width="1280" height="800" key="dock-window-1/0.23.1280.734@0.23.1280.734" timestamp="1589141057327" />
     <state x="-1433" y="518" key="refactoring.ChangeSignatureDialog" timestamp="1587674935147">
       <screen x="-2560" y="0" width="2560" height="1440" />
     </state>
@@ -185,16 +192,5 @@
     </state>
     <state x="305" y="124" width="670" height="676" key="search.everywhere.popup/0.0.1280.800/-2560.0.2560.1440@0.0.1280.800" timestamp="1586666179088" />
     <state x="-1950" y="243" width="1340" height="1198" key="search.everywhere.popup/0.23.1280.734/-2560.23.2560.1417@-2560.23.2560.1417" timestamp="1589046400379" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/train.py</url>
-          <line>321</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
 </project>
