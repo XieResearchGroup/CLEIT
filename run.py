@@ -90,11 +90,11 @@ if __name__ == '__main__':
     #                                                                val_dataset=val_dataset,
     #                                                                transmission_loss_fn=loss.mmd_loss,
     #                                                                )
-    mut_encoder, mut_pre_train_history_df = train.pre_train_mut_AE_with_GAN(auto_encoder=mut_auto_encoder,
-                                                                   reference_encoder=gex_encoder,
-                                                                   train_dataset=train_dataset,
-                                                                   val_dataset=val_dataset,
-                                                                   )
+    # mut_encoder, mut_pre_train_history_df = train.pre_train_mut_AE_with_GAN(auto_encoder=mut_auto_encoder,
+    #                                                                reference_encoder=gex_encoder,
+    #                                                                train_dataset=train_dataset,
+    #                                                                val_dataset=val_dataset,
+    #                                                                )
 
 
     train_dataset = tf.data.Dataset.from_tensor_slices(
@@ -122,9 +122,9 @@ if __name__ == '__main__':
 
     utils.safe_make_dir('history')
     with open(os.path.join('history', 'history.pkl'), 'wb') as handle:
-        pickle.dump(gex_pre_train_history_df)
-        pickle.dump(gex_fine_tune_train_history)
-        pickle.dump(gex_fine_tune_validation_history)
-        pickle.dump(mut_pre_train_history_df)
-        pickle.dump(mut_fine_tune_train_history)
-        pickle.dump(mut_fine_tune_validation_history)
+        pickle.dump(gex_pre_train_history_df, handle)
+        pickle.dump(gex_fine_tune_train_history, handle)
+        pickle.dump(gex_fine_tune_validation_history, handle)
+        pickle.dump(mut_pre_train_history_df, handle)
+        pickle.dump(mut_fine_tune_train_history, handle)
+        pickle.dump(mut_fine_tune_validation_history, handle)

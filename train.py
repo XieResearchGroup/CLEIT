@@ -335,9 +335,9 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
 
     if transmitter_flag:
         transmitter = module.MLPBlock(architecture=model_config.transmitter_architecture,
-                                      act_fn=module_config.transmitter_act_fn,
+                                      act_fn=model_config.transmitter_act_fn,
                                       output_act_fn=model_config.transmitter_output_act_fn,
-                                      output_dim=transmitter_output_dim)
+                                      output_dim=model_config.transmitter_output_dim)
     if gradient_threshold is not None:
         grad_norm = 0.
 
@@ -360,7 +360,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
                 preds = auto_encoder(x_batch_train, training=True)
                 loss_value = (1 - alpha) * loss_fn(y_batch_train, preds)
                 if transmitter_flag:
-                    loss_value += alpha * transmission_loss_fn(reference_encoded_x, transmitter(encoded_X))
+                    loss_value += alpha * transmission_loss_fn(reference_encoded_x, transmitter(encoded_X, training=True))
                 else:
                     loss_value += alpha * transmission_loss_fn(reference_encoded_x, encoded_X)
 
@@ -393,7 +393,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
             val_preds = auto_encoder(x_batch_val, training=False)
             val_loss_value = (1 - alpha) * loss_fn(y_batch_val, val_preds)
             if transmitter_flag:
-                val_loss_value += alpha * transmission_loss_fn(reference_encoded_x_val, transmitter(encoded_X_val))
+                val_loss_value += alpha * transmission_loss_fn(reference_encoded_x_val, transmitter(encoded_X_val, training=False))
             else:
                 val_loss_value += alpha * transmission_loss_fn(reference_encoded_x_val, encoded_X_val)
             total_val_loss += val_loss_value
@@ -454,9 +454,9 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
 
     if transmitter_flag:
         transmitter = module.MLPBlock(architecture=model_config.transmitter_architecture,
-                                      act_fn=module_config.transmitter_act_fn,
+                                      act_fn=model_config.transmitter_act_fn,
                                       output_act_fn=model_config.transmitter_output_act_fn,
-                                      output_dim=transmitter_output_dim)
+                                      output_dim=model_config.transmitter_output_dim)
     if gradient_threshold is not None:
         grad_norm = 0.
 
@@ -492,7 +492,7 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
 
                 critic_real = critic(reference_encoded_x)
                 if transmitter_flag:
-                    critic_fake = critic(transmitter(encoded_X))
+                    critic_fake = critic(transmitter(encoded_X, training=True))
                 else:
                     critic_fake = critic(encoded_X)
 
@@ -545,7 +545,7 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
                 encoded_X_val = auto_encoder.encoder(x_batch_val, training=False)
                 reference_encoded_x_val = reference_encoder(reference_x_batch_val, training=False)
             if transmitter_flag:
-                critic_val_fake = critic(transmitter(encoded_X_val))
+                critic_val_fake = critic(transmitter(encoded_X_val, training=False))
             else:
                 critic_val_fake = critic(encoded_X_val)
 
@@ -639,9 +639,9 @@ def fine_tune_mut_encoder(encoder, train_dataset,
 
     if transmitter_flag:
         transmitter = module.MLPBlock(architecture=model_config.transmitter_architecture,
-                                      act_fn=module_config.transmitter_act_fn,
+                                      act_fn=model_config.transmitter_act_fn,
                                       output_act_fn=model_config.transmitter_output_act_fn,
-                                      output_dim=transmitter_output_dim)
+                                      output_dim=model_config.transmitter_output_dim)
         transmitter.load_weights(os.path.join(output_folder, 'pre_trained_transmitter_weights'))
         if gradual_unfreezing_flag:
             transmitter.trainable = False
