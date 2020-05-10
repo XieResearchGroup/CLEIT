@@ -77,19 +77,19 @@ if __name__ == '__main__':
                            output_act_fn=keras.activations.relu,
                            kernel_regularizer_l=model_config.kernel_regularizer_l)
 
-    mut_encoder, mut_pre_train_history_df = train.pre_train_mut_AE(auto_encoder=mut_auto_encoder,
-                                                                   reference_encoder=gex_encoder,
-                                                                   train_dataset=train_dataset,
-                                                                   val_dataset=val_dataset,
-                                                                   transmission_loss_fn=loss.contrastive_loss,
-                                                                   )
-
     # mut_encoder, mut_pre_train_history_df = train.pre_train_mut_AE(auto_encoder=mut_auto_encoder,
     #                                                                reference_encoder=gex_encoder,
     #                                                                train_dataset=train_dataset,
     #                                                                val_dataset=val_dataset,
-    #                                                                transmission_loss_fn=loss.mmd_loss,
+    #                                                                transmission_loss_fn=loss.contrastive_loss,
     #                                                                )
+
+    mut_encoder, mut_pre_train_history_df = train.pre_train_mut_AE(auto_encoder=mut_auto_encoder,
+                                                                   reference_encoder=gex_encoder,
+                                                                   train_dataset=train_dataset,
+                                                                   val_dataset=val_dataset,
+                                                                   transmission_loss_fn=loss.mmd_loss,
+                                                                   )
     # mut_encoder, mut_pre_train_history_df = train.pre_train_mut_AE_with_GAN(auto_encoder=mut_auto_encoder,
     #                                                                reference_encoder=gex_encoder,
     #                                                                train_dataset=train_dataset,
