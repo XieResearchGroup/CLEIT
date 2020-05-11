@@ -31,6 +31,9 @@ if __name__ == '__main__':
     data_provider = data.DataProvider(feature_filter=args.filter, target=args.target,
                                       feature_number=args.feature_number,
                                       omics=['gex', 'mut'])
+    #unlabeled gex has few small negative value
+    data_provider.unlabeled_data['gex'].where(data_provider.unlabeled_data['gex'] > 0, 0, inplace=True)
+    assert data_provider.unlabeled_data['gex'].min().min() >= 0
 
     if args.clr_fn == 'contrastive':
         pre_train_mut_AE_fn = partial(train.pre_train_mut_AE, transmission_loss_fn=loss.contrastive_loss)
@@ -55,8 +58,6 @@ if __name__ == '__main__':
             # Memory growth must be set before GPUs have been initialized
             print(e)
 
-    data_provider = data.DataProvider(feature_filter='FILE',
-                                      omics=['gex', 'mut'])
     train_dataset = tf.data.Dataset.from_tensor_slices(
         (data_provider.unlabeled_data['gex'].values, data_provider.unlabeled_data['gex'].values))
     val_dataset = tf.data.Dataset.from_tensor_slices(
@@ -121,7 +122,7 @@ if __name__ == '__main__':
     mut_encoder, mut_pre_train_history_df = pre_train_mut_AE_fn(auto_encoder=mut_auto_encoder,
                                                                    reference_encoder=gex_encoder,
                                                                    train_dataset=train_dataset,
-                                                                   val_dataset=val_dataset,
+                                                                   val_dataset=val_dataset
                                                                    )
     # mut_encoder, mut_pre_train_history_df = train.pre_train_mut_AE_with_GAN(auto_encoder=mut_auto_encoder,
     #                                                                reference_encoder=gex_encoder,

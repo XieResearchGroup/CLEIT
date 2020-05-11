@@ -20,18 +20,20 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
                      gradient_threshold=model_config.gradient_threshold):
     output_folder = os.path.join('saved_weights', 'gex', repr(auto_encoder.encoder) + '_encoder_weights')
     safe_make_dir(output_folder)
-    train_dataset = train_dataset.shuffle(buffer_size=1024).batch(batch_size)
-    val_dataset = val_dataset.batch(batch_size)
 
+    train_dataset = train_dataset.shuffle(buffer_size=1024).batch(batch_size)
     train_mse_metric = keras.metrics.MeanSquaredError()
     train_mae_metric = keras.metrics.MeanAbsoluteError()
-    val_mse_metric = keras.metrics.MeanSquaredError()
-    val_mae_metric = keras.metrics.MeanAbsoluteError()
+
+    if val_dataset is not None:
+        val_dataset = val_dataset.batch(batch_size)
+        val_mse_metric = keras.metrics.MeanSquaredError()
+        val_mae_metric = keras.metrics.MeanAbsoluteError()
+        val_mse_list = []
+        val_mae_list = []
 
     train_mse_list = []
     train_mae_list = []
-    val_mse_list = []
-    val_mae_list = []
     best_loss = float('inf')
     tolerance_count = 0
 
@@ -62,46 +64,53 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
         train_mse_metric.reset_states()
         train_mae_metric.reset_states()
 
-        for x_batch_val, y_batch_val in val_dataset:
-            val_preds = auto_encoder(x_batch_val, training=False)
-            val_mse_metric(y_batch_val, val_preds)
-            val_mae_metric(y_batch_val, val_preds)
-        val_mse = val_mse_metric.result()
-        val_mae = val_mae_metric.result()
-        val_mse_list.append(val_mse)
-        val_mae_list.append(val_mae)
-        val_mae_metric.reset_states()
-        val_mse_metric.reset_states()
+        if val_dataset is not None:
+            for x_batch_val, y_batch_val in val_dataset:
+                val_preds = auto_encoder(x_batch_val, training=False)
+                val_mse_metric(y_batch_val, val_preds)
+                val_mae_metric(y_batch_val, val_preds)
+            val_mse = val_mse_metric.result()
+            val_mae = val_mae_metric.result()
+            val_mse_list.append(val_mse)
+            val_mae_list.append(val_mae)
+            val_mae_metric.reset_states()
+            val_mse_metric.reset_states()
 
-        if val_mse < best_loss:
-            auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
-                                              save_format='tf')
-            if val_mse + diff_threshold < best_loss:
-                tolerance_count = 0
+            if val_mse < best_loss:
+                auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
+                                                  save_format='tf')
+                if val_mse + diff_threshold < best_loss:
+                    tolerance_count = 0
+                else:
+                    tolerance_count += 1
+                best_loss = val_mse
             else:
                 tolerance_count += 1
-            best_loss = val_mse
-        else:
-            tolerance_count += 1
 
-        if epoch < min_epoch:
-            tolerance_count = 0
+            if epoch < min_epoch:
+                tolerance_count = 0
+            else:
+                if tolerance_count > tolerance and gradient_threshold is None:
+                    break
 
         if gradient_threshold is not None:
             if grad_norm < gradient_threshold:
-                auto_encoder.encoder.load_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'))
                 break
-        else:
-            if tolerance_count > tolerance:
-                auto_encoder.encoder.load_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'))
-                break
-
-    return auto_encoder.encoder, pd.DataFrame({
-        'train_mse': train_mse_list,
-        'train_maep': train_mae_list,
-        'val_mse': val_mse_list,
-        'val_maep': val_mae_list
-    })
+    if val_dataset is None:
+        auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
+                                          save_format='tf')
+        return auto_encoder.encoder, pd.DataFrame({
+            'train_mse': train_mse_list,
+            'train_maep': train_mae_list
+        })
+    else:
+        auto_encoder.encoder.load_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'))
+        return auto_encoder.encoder, pd.DataFrame({
+            'train_mse': train_mse_list,
+            'train_maep': train_mae_list,
+            'val_mse': val_mse_list,
+            'val_maep': val_mae_list
+        })
 
 
 def fine_tune_gex_encoder(encoder,
@@ -128,7 +137,9 @@ def fine_tune_gex_encoder(encoder,
     best_overall_metric = float('-inf')
 
     train_dataset = train_dataset.shuffle(buffer_size=512).batch(batch_size)
-    val_dataset = val_dataset.batch(batch_size)
+
+    if val_dataset is not None:
+        val_dataset = val_dataset.batch(batch_size)
 
     training_history = defaultdict(list)
     validation_history = defaultdict(list)
@@ -260,51 +271,57 @@ def fine_tune_gex_encoder(encoder,
         training_history['mse'].append(train_epoch_mse / counts)
         training_history['mae'].append(train_epoch_mae / counts)
 
-        val_epoch_loss = 0.
-        val_epoch_pearson = 0.
-        val_epoch_spearman = 0.
-        val_epoch_mse = 0.
-        val_epoch_mae = 0.
-        counts = 0.
+        if val_dataset is not None:
+            val_epoch_loss = 0.
+            val_epoch_pearson = 0.
+            val_epoch_spearman = 0.
+            val_epoch_mse = 0.
+            val_epoch_mae = 0.
+            counts = 0.
 
-        for x_batch_val, y_batch_val in val_dataset:
-            if repr(encoder).startswith('stochastic'):
-                encoded_val_X = encoder(x_batch_val, training=False)[0]
-            else:
-                encoded_val_X = encoder(x_batch_val, training=False)
-            val_preds = regressor(encoded_val_X, training=False)
+            for x_batch_val, y_batch_val in val_dataset:
+                if repr(encoder).startswith('stochastic'):
+                    encoded_val_X = encoder(x_batch_val, training=False)[0]
+                else:
+                    encoded_val_X = encoder(x_batch_val, training=False)
+                val_preds = regressor(encoded_val_X, training=False)
 
-            val_loss_value = loss_fn(y_pred=val_preds, y_true=y_batch_val)
-            val_epoch_loss += val_loss_value
+                val_loss_value = loss_fn(y_pred=val_preds, y_true=y_batch_val)
+                val_epoch_loss += val_loss_value
 
-            val_epoch_pearson += pearson_correlation(y_pred=val_preds, y_true=y_batch_val)
-            val_epoch_spearman += spearman_correlation(y_pred=val_preds, y_true=y_batch_val)
-            val_epoch_mse += mse(y_pred=val_preds, y_true=y_batch_val)
-            val_epoch_mae += mae(y_pred=val_preds, y_true=y_batch_val)
-            counts += 1.
+                val_epoch_pearson += pearson_correlation(y_pred=val_preds, y_true=y_batch_val)
+                val_epoch_spearman += spearman_correlation(y_pred=val_preds, y_true=y_batch_val)
+                val_epoch_mse += mse(y_pred=val_preds, y_true=y_batch_val)
+                val_epoch_mae += mae(y_pred=val_preds, y_true=y_batch_val)
+                counts += 1.
 
-            # total_val_pearson += val_pearson / float(target_df.shape[-1])
-            # total_val_spearman += val_spearman / float(target_df.shape[-1])
-            # total_val_mse += val_mse / float(target_df.shape[-1])
-            # total_val_mae += val_mae / float(target_df.shape[-1])
-        validation_history['loss'].append(val_epoch_loss / counts)
-        validation_history['pearson'].append(val_epoch_pearson / counts)
-        validation_history['spearman'].append(val_epoch_spearman / counts)
-        validation_history['mse'].append(val_epoch_mse / counts)
-        validation_history['mae'].append(val_epoch_mae / counts)
+                # total_val_pearson += val_pearson / float(target_df.shape[-1])
+                # total_val_spearman += val_spearman / float(target_df.shape[-1])
+                # total_val_mse += val_mse / float(target_df.shape[-1])
+                # total_val_mae += val_mae / float(target_df.shape[-1])
+            validation_history['loss'].append(val_epoch_loss / counts)
+            validation_history['pearson'].append(val_epoch_pearson / counts)
+            validation_history['spearman'].append(val_epoch_spearman / counts)
+            validation_history['mse'].append(val_epoch_mse / counts)
+            validation_history['mae'].append(val_epoch_mae / counts)
 
-        # print(validation_history['val_total'][validation_monitoring_metric][-1])
-        # print(best_overall_metric)
+            # print(validation_history['val_total'][validation_monitoring_metric][-1])
+            # print(best_overall_metric)
 
-        if validation_history[validation_monitoring_metric][-1] > best_overall_metric:
-            best_overall_metric = validation_history[validation_monitoring_metric][-1]
-            encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
-            regressor.save_weights(os.path.join(output_folder, 'regressor_weights'), save_format='tf')
-            # print(len(to_train_variables))
+            if validation_history[validation_monitoring_metric][-1] > best_overall_metric:
+                best_overall_metric = validation_history[validation_monitoring_metric][-1]
+                encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
+                regressor.save_weights(os.path.join(output_folder, 'regressor_weights'), save_format='tf')
+                # print(len(to_train_variables))
 
         if gradient_threshold is not None:
             if grad_norm < gradient_threshold:
                 break
+
+    if val_dataset is None:
+        encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
+        regressor.save_weights(os.path.join(output_folder, 'regressor_weights'), save_format='tf')
+
     return training_history, validation_history
 
 
@@ -325,12 +342,14 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
     safe_make_dir(output_folder)
 
     train_dataset = train_dataset.shuffle(buffer_size=1024).batch(batch_size)
-    val_dataset = val_dataset.batch(batch_size)
+
+    if val_dataset is not None:
+        val_dataset = val_dataset.batch(batch_size)
+        val_loss_history = []
+        best_val_loss = float('inf')
 
     train_loss_history = []
-    val_loss_history = []
 
-    best_val_loss = float('inf')
     tolerance_count = 0
     reference_encoder.trainable = False
 
@@ -345,8 +364,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
     for epoch in range(max_epoch):
         total_train_loss = 0.
         total_train_steps = 0
-        total_val_loss = 0.
-        total_val_steps = 0.
+
         print('epoch: ', epoch)
         for step, (x_batch_train, y_batch_train, reference_x_batch_train) in enumerate(train_dataset):
             total_train_steps += 1
@@ -361,7 +379,8 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
                 preds = auto_encoder(x_batch_train, training=True)
                 loss_value = (1 - alpha) * loss_fn(y_batch_train, preds)
                 if transmitter_flag:
-                    loss_value += alpha * transmission_loss_fn(reference_encoded_x, transmitter(encoded_X, training=True))
+                    loss_value += alpha * transmission_loss_fn(reference_encoded_x,
+                                                               transmitter(encoded_X, training=True))
                 else:
                     loss_value += alpha * transmission_loss_fn(reference_encoded_x, encoded_X)
 
@@ -383,53 +402,67 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
                 print('Seen so far: %s samples' % ((step + 1) * batch_size))
         train_loss_history.append(total_train_loss / float(total_train_steps))
 
-        for step, (x_batch_val, y_batch_val, reference_x_batch_val) in enumerate(val_dataset):
-            total_val_steps += 1
-            if repr(auto_encoder.encoder).startswith('stochastic'):
-                encoded_X_val = auto_encoder.encoder(x_batch_val, training=False)[0]
-                reference_encoded_x_val = reference_encoder(reference_x_batch_val, training=False)[0]
-            else:
-                encoded_X_val = auto_encoder.encoder(x_batch_val, training=False)
-                reference_encoded_x_val = reference_encoder(reference_x_batch_val, training=False)
-            val_preds = auto_encoder(x_batch_val, training=False)
-            val_loss_value = (1 - alpha) * loss_fn(y_batch_val, val_preds)
-            if transmitter_flag:
-                val_loss_value += alpha * transmission_loss_fn(reference_encoded_x_val, transmitter(encoded_X_val, training=False))
-            else:
-                val_loss_value += alpha * transmission_loss_fn(reference_encoded_x_val, encoded_X_val)
-            total_val_loss += val_loss_value
-        val_loss_history.append(total_val_loss / float(total_val_steps))
+        if val_dataset is not None:
+            total_val_loss = 0.
+            total_val_steps = 0.
+            for step, (x_batch_val, y_batch_val, reference_x_batch_val) in enumerate(val_dataset):
+                total_val_steps += 1
+                if repr(auto_encoder.encoder).startswith('stochastic'):
+                    encoded_X_val = auto_encoder.encoder(x_batch_val, training=False)[0]
+                    reference_encoded_x_val = reference_encoder(reference_x_batch_val, training=False)[0]
+                else:
+                    encoded_X_val = auto_encoder.encoder(x_batch_val, training=False)
+                    reference_encoded_x_val = reference_encoder(reference_x_batch_val, training=False)
+                val_preds = auto_encoder(x_batch_val, training=False)
+                val_loss_value = (1 - alpha) * loss_fn(y_batch_val, val_preds)
+                if transmitter_flag:
+                    val_loss_value += alpha * transmission_loss_fn(reference_encoded_x_val,
+                                                                   transmitter(encoded_X_val, training=False))
+                else:
+                    val_loss_value += alpha * transmission_loss_fn(reference_encoded_x_val, encoded_X_val)
+                total_val_loss += val_loss_value
+            val_loss_history.append(total_val_loss / float(total_val_steps))
 
-        if val_loss_history[-1] < best_val_loss:
-            auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
-                                              save_format='tf')
-            if transmitter_flag:
-                transmitter.save_weights(os.path.join(output_folder, 'pre_trained_transmitter_weights'),
-                                         save_format='tf')
-            if val_loss_history[-1] + diff_threshold < best_val_loss:
-                tolerance_count = 0
+            if val_loss_history[-1] < best_val_loss:
+                auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
+                                                  save_format='tf')
+                if transmitter_flag:
+                    transmitter.save_weights(os.path.join(output_folder, 'pre_trained_transmitter_weights'),
+                                             save_format='tf')
+                if val_loss_history[-1] + diff_threshold < best_val_loss:
+                    tolerance_count = 0
+                else:
+                    tolerance_count += 1
+                best_val_loss = val_loss_history[-1]
             else:
                 tolerance_count += 1
-            best_val_loss = val_loss_history[-1]
-        else:
-            tolerance_count += 1
 
-        if epoch < min_epoch:
-            tolerance_count = 0
+            if epoch < min_epoch:
+                tolerance_count = 0
+            else:
+                if tolerance_count > tolerance and gradient_threshold is None:
+                    break
 
         if gradient_threshold is not None:
             if grad_norm < gradient_threshold:
-                auto_encoder.encoder.load_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'))
-                break
-        else:
-            if tolerance_count > tolerance:
-                auto_encoder.encoder.load_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'))
                 break
 
-    return auto_encoder.encoder, pd.DataFrame({
-        'train_loss': train_loss_history,
-        'val_loss': val_loss_history,
-    })
+    if val_dataset is None:
+        auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
+                                          save_format='tf')
+        if transmitter_flag:
+            transmitter.save_weights(os.path.join(output_folder, 'pre_trained_transmitter_weights'),
+                                     save_format='tf')
+        return auto_encoder.encoder, pd.DataFrame({
+            'train_loss': train_loss_history
+        })
+
+    else:
+        auto_encoder.encoder.load_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'))
+        return auto_encoder.encoder, pd.DataFrame({
+            'train_loss': train_loss_history,
+            'val_loss': val_loss_history
+        })
 
 
 def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, val_dataset,
@@ -452,7 +485,12 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
 
     critic = module.Critic(architecture=[128, 64, 32], output_dim=1)
     train_dataset = train_dataset.shuffle(buffer_size=1024).batch(batch_size)
-    val_dataset = val_dataset.batch(batch_size)
+
+    if val_dataset is not None:
+        val_dataset = val_dataset.batch(batch_size)
+        val_loss_history = []
+        val_gen_loss_history = []
+        best_val_loss = float('inf')
 
     if transmitter_flag:
         transmitter = module.MLPBlock(architecture=model_config.transmitter_architecture,
@@ -463,11 +501,8 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
         grad_norm = 0.
 
     train_loss_history = []
-    val_loss_history = []
     train_gen_loss_history = []
-    val_gen_loss_history = []
 
-    best_val_loss = float('inf')
     tolerance_count = 0
     reference_encoder.trainable = False
 
@@ -478,9 +513,6 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
         total_train_gen_loss = 0.
         total_train_steps = 0
 
-        total_val_loss = 0.
-        total_val_gen_loss = 0.
-        total_val_steps = 0
         print('epoch: ', epoch)
         for step, (x_batch_train, y_batch_train, reference_x_batch_train) in enumerate(train_dataset):
             total_train_steps += 1
@@ -525,8 +557,10 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
                     loss_value += sum(auto_encoder.losses)
                     if transmitter_flag:
                         loss_value += sum(transmitter.losses)
-                        grads = tape.gradient(loss_value, auto_encoder.trainable_variables+transmitter.trainable_variables)
-                        optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables+transmitter.trainable_variables))
+                        grads = tape.gradient(loss_value,
+                                              auto_encoder.trainable_variables + transmitter.trainable_variables)
+                        optimizer.apply_gradients(
+                            zip(grads, auto_encoder.trainable_variables + transmitter.trainable_variables))
                     else:
                         grads = tape.gradient(loss_value, auto_encoder.trainable_variables)
                         optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables))
@@ -536,63 +570,78 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
                 print('Seen so far: %s samples' % ((step + 1) * batch_size))
 
         train_loss_history.append(total_train_loss / float(total_train_steps))
-        train_gen_loss_history.append(total_train_gen_loss / float(total_train_steps//n_critic))
+        train_gen_loss_history.append(total_train_gen_loss / float(total_train_steps // n_critic))
 
-        for step, (x_batch_val, y_batch_val, reference_x_batch_val) in enumerate(val_dataset):
-            total_val_steps += 1
-            if repr(auto_encoder.encoder).startswith('stochastic'):
-                encoded_X_val = auto_encoder.encoder(x_batch_val, training=False)[0]
-                reference_encoded_x_val = reference_encoder(reference_x_batch_val, training=False)[0]
-            else:
-                encoded_X_val = auto_encoder.encoder(x_batch_val, training=False)
-                reference_encoded_x_val = reference_encoder(reference_x_batch_val, training=False)
-            if transmitter_flag:
-                critic_val_fake = critic(transmitter(encoded_X_val, training=False))
-            else:
-                critic_val_fake = critic(encoded_X_val)
+        if val_dataset is not None:
+            total_val_loss = 0.
+            total_val_gen_loss = 0.
+            total_val_steps = 0
+            for step, (x_batch_val, y_batch_val, reference_x_batch_val) in enumerate(val_dataset):
+                total_val_steps += 1
+                if repr(auto_encoder.encoder).startswith('stochastic'):
+                    encoded_X_val = auto_encoder.encoder(x_batch_val, training=False)[0]
+                    reference_encoded_x_val = reference_encoder(reference_x_batch_val, training=False)[0]
+                else:
+                    encoded_X_val = auto_encoder.encoder(x_batch_val, training=False)
+                    reference_encoded_x_val = reference_encoder(reference_x_batch_val, training=False)
+                if transmitter_flag:
+                    critic_val_fake = critic(transmitter(encoded_X_val, training=False))
+                else:
+                    critic_val_fake = critic(encoded_X_val)
 
-            critic_val_real = critic(reference_encoded_x_val)
-            critic_val_loss = tf.reduce_mean(critic_val_fake - critic_val_real, axis=0)
+                critic_val_real = critic(reference_encoded_x_val)
+                critic_val_loss = tf.reduce_mean(critic_val_fake - critic_val_real, axis=0)
 
-            # val_preds = auto_encoder(x_batch_val, training=False)
-            # val_loss_value = loss_fn(y_batch_val, val_preds)
-            # val_loss_value -= alpha * critic_val_fake
-            total_val_loss += critic_val_loss
-            total_val_gen_loss -= tf.reduce_mean(critic_val_fake, axis=0)
-        val_loss_history.append(total_val_loss / float(total_val_steps))
-        val_gen_loss_history.append(total_val_gen_loss / float(total_val_steps))
+                # val_preds = auto_encoder(x_batch_val, training=False)
+                # val_loss_value = loss_fn(y_batch_val, val_preds)
+                # val_loss_value -= alpha * critic_val_fake
+                total_val_loss += critic_val_loss
+                total_val_gen_loss -= tf.reduce_mean(critic_val_fake, axis=0)
+            val_loss_history.append(total_val_loss / float(total_val_steps))
+            val_gen_loss_history.append(total_val_gen_loss / float(total_val_steps))
 
-        if val_loss_history[-1] < best_val_loss:
-            auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
-                                              save_format='tf')
-            if transmitter_flag:
-                transmitter.save_weights(os.path.join(output_folder, 'pre_trained_transmitter_weights'),
-                                         save_format='tf')
-            if val_loss_history[-1] + diff_threshold < best_val_loss:
-                tolerance_count = 0
+            if val_loss_history[-1] < best_val_loss:
+                auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
+                                                  save_format='tf')
+                if transmitter_flag:
+                    transmitter.save_weights(os.path.join(output_folder, 'pre_trained_transmitter_weights'),
+                                             save_format='tf')
+                if val_loss_history[-1] + diff_threshold < best_val_loss:
+                    tolerance_count = 0
+                else:
+                    tolerance_count += 1
+                best_val_loss = val_loss_history[-1]
             else:
                 tolerance_count += 1
-            best_val_loss = val_loss_history[-1]
-        else:
-            tolerance_count += 1
 
-        if epoch < min_epoch:
-            tolerance_count = 0
+            if epoch < min_epoch:
+                tolerance_count = 0
+            else:
+                if tolerance_count > tolerance and gradient_threshold is None:
+                    break
+
         if gradient_threshold is not None:
             if grad_norm < gradient_threshold:
-                auto_encoder.encoder.load_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'))
-                break
-        else:
-            if tolerance_count > tolerance:
-                auto_encoder.encoder.load_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'))
                 break
 
-    return auto_encoder.encoder, pd.DataFrame({
-        'train_critic_loss': train_loss_history,
-        'val_critic_loss': val_loss_history,
-        'train_gen_loss': train_gen_loss_history,
-        'val_gen_loss': val_gen_loss_history
-    })
+    if val_dataset is None:
+        auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
+                                          save_format='tf')
+        if transmitter_flag:
+            transmitter.save_weights(os.path.join(output_folder, 'pre_trained_transmitter_weights'),
+                                     save_format='tf')
+        return auto_encoder.encoder, pd.DataFrame({
+            'train_critic_loss': train_loss_history,
+            'train_gen_loss': train_gen_loss_history
+        })
+    else:
+        auto_encoder.encoder.load_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'))
+        return auto_encoder.encoder, pd.DataFrame({
+            'train_critic_loss': train_loss_history,
+            'val_critic_loss': val_loss_history,
+            'train_gen_loss': train_gen_loss_history,
+            'val_gen_loss': val_gen_loss_history
+        })
 
 
 def fine_tune_mut_encoder(encoder, train_dataset,
@@ -618,9 +667,10 @@ def fine_tune_mut_encoder(encoder, train_dataset,
     safe_make_dir(output_folder)
 
     best_overall_metric = float('-inf')
-
     train_dataset = train_dataset.shuffle(buffer_size=512).batch(batch_size)
-    val_dataset = val_dataset.batch(batch_size)
+
+    if val_dataset is not None:
+        val_dataset = val_dataset.batch(batch_size)
 
     training_history = defaultdict(list)
     validation_history = defaultdict(list)
@@ -731,48 +781,55 @@ def fine_tune_mut_encoder(encoder, train_dataset,
         training_history['mse'].append(train_epoch_mse / counts)
         training_history['mae'].append(train_epoch_mae / counts)
 
-        val_epoch_loss = 0.
-        val_epoch_pearson = 0.
-        val_epoch_spearman = 0.
-        val_epoch_mse = 0.
-        val_epoch_mae = 0.
-        counts = 0.
+        if val_dataset is not None:
+            val_epoch_loss = 0.
+            val_epoch_pearson = 0.
+            val_epoch_spearman = 0.
+            val_epoch_mse = 0.
+            val_epoch_mae = 0.
+            counts = 0.
 
-        for x_batch_val, y_batch_val in val_dataset:
-            if repr(encoder).startswith('stochastic'):
-                encoded_val_X = encoder(x_batch_val, training=False)[0]
-            else:
-                encoded_val_X = encoder(x_batch_val, training=False)
+            for x_batch_val, y_batch_val in val_dataset:
+                if repr(encoder).startswith('stochastic'):
+                    encoded_val_X = encoder(x_batch_val, training=False)[0]
+                else:
+                    encoded_val_X = encoder(x_batch_val, training=False)
 
-            if transmitter_flag:
-                encoded_val_X = transmitter(encoded_val_X, training=False)
+                if transmitter_flag:
+                    encoded_val_X = transmitter(encoded_val_X, training=False)
 
-            val_preds = regressor(encoded_val_X, training=False)
-            val_loss_value = loss_fn(y_pred=val_preds, y_true=y_batch_val)
-            val_epoch_loss += val_loss_value
-            val_epoch_pearson += pearson_correlation(y_pred=val_preds, y_true=y_batch_val)
-            val_epoch_spearman += spearman_correlation(y_pred=val_preds, y_true=y_batch_val)
-            val_epoch_mse += mse(y_pred=val_preds, y_true=y_batch_val)
-            val_epoch_mae += mae(y_pred=val_preds, y_true=y_batch_val)
-            counts += 1.
+                val_preds = regressor(encoded_val_X, training=False)
+                val_loss_value = loss_fn(y_pred=val_preds, y_true=y_batch_val)
+                val_epoch_loss += val_loss_value
+                val_epoch_pearson += pearson_correlation(y_pred=val_preds, y_true=y_batch_val)
+                val_epoch_spearman += spearman_correlation(y_pred=val_preds, y_true=y_batch_val)
+                val_epoch_mse += mse(y_pred=val_preds, y_true=y_batch_val)
+                val_epoch_mae += mae(y_pred=val_preds, y_true=y_batch_val)
+                counts += 1.
 
-        validation_history['loss'].append(val_epoch_loss / counts)
-        validation_history['pearson'].append(val_epoch_pearson / counts)
-        validation_history['spearman'].append(val_epoch_spearman / counts)
-        validation_history['mse'].append(val_epoch_mse / counts)
-        validation_history['mae'].append(val_epoch_mae / counts)
+            validation_history['loss'].append(val_epoch_loss / counts)
+            validation_history['pearson'].append(val_epoch_pearson / counts)
+            validation_history['spearman'].append(val_epoch_spearman / counts)
+            validation_history['mse'].append(val_epoch_mse / counts)
+            validation_history['mae'].append(val_epoch_mae / counts)
 
-        if validation_history[validation_monitoring_metric][-1] > best_overall_metric:
-            best_overall_metric = validation_history[validation_monitoring_metric][-1]
-            encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
-            regressor.save_weights(os.path.join(output_folder, 'regressor_weights'), save_format='tf')
-            if transmitter_flag:
-                transmitter.save_weights(os.path.join(output_folder, 'fine_tuned_transmitter_weights'),
-                                         save_format='tf')
+            if validation_history[validation_monitoring_metric][-1] > best_overall_metric:
+                best_overall_metric = validation_history[validation_monitoring_metric][-1]
+                encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
+                regressor.save_weights(os.path.join(output_folder, 'regressor_weights'), save_format='tf')
+                if transmitter_flag:
+                    transmitter.save_weights(os.path.join(output_folder, 'fine_tuned_transmitter_weights'),
+                                             save_format='tf')
 
         if gradient_threshold is not None:
             if grad_norm < gradient_threshold:
                 break
+    if val_dataset is None:
+        encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
+        regressor.save_weights(os.path.join(output_folder, 'regressor_weights'), save_format='tf')
+        if transmitter_flag:
+            transmitter.save_weights(os.path.join(output_folder, 'fine_tuned_transmitter_weights'),
+                                     save_format='tf')
 
     return training_history, validation_history
 

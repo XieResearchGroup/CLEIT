@@ -1,9 +1,12 @@
 import utils
+import model_config
 from layer import *
 
 
 class EncoderBlock(keras.Model):
-    def __init__(self, latent_dim, architecture, output_act_fn=None, name='encoder', stochastic_flag=False,
+    def __init__(self, latent_dim, architecture, act_fn='relu', output_act_fn=model_config.encoder_output_act_fn,
+                 name='encoder',
+                 stochastic_flag=False,
                  kernel_regularizer_l=0.001, **kwargs):
         super(EncoderBlock, self).__init__(name=name, **kwargs)
         self.intermediate_layers = []
@@ -11,10 +14,11 @@ class EncoderBlock(keras.Model):
         self.architecture = architecture
         self.stochastic_flag = stochastic_flag
         for dim in architecture:
-            self.intermediate_layers.append(DenseLayer(units=dim, kernel_regularizer_l=kernel_regularizer_l))
+            self.intermediate_layers.append(
+                DenseLayer(units=dim, activation=act_fn, kernel_regularizer_l=kernel_regularizer_l))
         self.output_layer = keras.layers.Dense(latent_dim, activation=output_act_fn)
         if self.stochastic_flag:
-            self.extra_output_layer = keras.layers.Dense(latent_dim, activation=output_act_fn)
+            self.extra_output_layer = keras.layers.Dense(latent_dim, activation=keras.activations.relu)
 
     def __repr__(self):
         if self.stochastic_flag:
@@ -61,7 +65,7 @@ class MLPBlock(keras.Model):
 
 
 class MLPBlockWithMask(keras.Model):
-    def __init__(self, output_dim, architecture, shared_layer_num=1, act_fn='relu', output_act_fn=None, name='mlp',
+    def __init__(self, output_dim, architecture, shared_layer_num=1, act_fn='relu', output_act_fn=None, name='mlpm',
                  kernel_regularizer_l=0.001, **kwargs):
         super(MLPBlockWithMask, self).__init__(name=name, **kwargs)
         self.intermediate_layers = []
@@ -73,8 +77,9 @@ class MLPBlockWithMask(keras.Model):
             self.intermediate_layers.append(
                 DenseLayer(units=dim, activation=act_fn, kernel_regularizer_l=kernel_regularizer_l))
         self.intermediate_layers.append(
-            DenseLayer(units=architecture[shared_layer_num]*output_dim, activation=act_fn, kernel_regularizer_l=kernel_regularizer_l))
-        for dim in architecture[shared_layer_num+1:]:
+            DenseLayer(units=architecture[shared_layer_num] * output_dim, activation=act_fn,
+                       kernel_regularizer_l=kernel_regularizer_l))
+        for dim in architecture[shared_layer_num + 1:]:
             self.intermediate_layers.append(
                 DenseLayerWithMask(num_of_splits=self.output_dim, units_per_split=dim, activation=act_fn,
                                    kernel_regularizer_l=kernel_regularizer_l))
@@ -118,14 +123,17 @@ class Critic(keras.Model):
 
 
 class AE(keras.Model):
-    def __init__(self, latent_dim, output_dim, architecture, output_act_fn=None, kernel_regularizer_l=0.001,
+    def __init__(self, latent_dim, output_dim, architecture, act_fn='relu', output_act_fn=None,
+                 kernel_regularizer_l=0.001,
                  noise_fn=None, name='ae', **kwargs):
         super(AE, self).__init__(name=name, **kwargs)
         if noise_fn is not None:
             self.noise_layer = noise_fn(0.005)
-        self.encoder = EncoderBlock(latent_dim=latent_dim, architecture=architecture, output_act_fn=output_act_fn,
+        self.encoder = EncoderBlock(latent_dim=latent_dim, architecture=architecture, act_fn=act_fn,
+                                    output_act_fn=None,
                                     kernel_regularizer_l=kernel_regularizer_l)
         self.decoder = MLPBlock(output_dim=output_dim, architecture=architecture[::-1], output_act_fn=output_act_fn,
+                                act_fn=act_fn,
                                 kernel_regularizer_l=kernel_regularizer_l,
                                 name='decoder')
 
@@ -138,17 +146,20 @@ class AE(keras.Model):
 
 
 class VAE(keras.Model):
-    #beta VAE
-    def __init__(self, latent_dim, output_dim, architecture, output_act_fn=None, beta=1.0, kernel_regularizer_l=0.001,
+    # beta VAE
+    def __init__(self, latent_dim, output_dim, architecture, act_fn='relu', output_act_fn=None, beta=1.0,
+                 kernel_regularizer_l=0.001,
                  noise_fn=None, name='ae', **kwargs):
         super(VAE, self).__init__(name=name, **kwargs)
         if noise_fn is not None:
-            self.noise_layer = noise_fn(0.005)
+            self.noise_layer = noise_fn(0.001)
         self.beta = beta
-        self.encoder = EncoderBlock(latent_dim=latent_dim, architecture=architecture, output_act_fn=output_act_fn,
+        self.encoder = EncoderBlock(latent_dim=latent_dim, architecture=architecture, output_act_fn=None,
+                                    act_fn=act_fn,
                                     kernel_regularizer_l=kernel_regularizer_l,
                                     stochastic_flag=True)
         self.decoder = MLPBlock(output_dim=output_dim, architecture=architecture[::-1], output_act_fn=output_act_fn,
+                                act_fn=act_fn,
                                 kernel_regularizer_l=kernel_regularizer_l,
                                 name='decoder')
 

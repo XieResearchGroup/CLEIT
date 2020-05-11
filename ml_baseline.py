@@ -98,6 +98,7 @@ if __name__ == '__main__':
     data_provider = data.DataProvider(feature_filter=args.filter, target=args.target,
                                       feature_number=args.feature_number,
                                       omics=['gex', 'mut'])
+
     data_provider.labeled_data['gex'].columns = data_provider.labeled_data['gex'].columns + '_gex'
     data_provider.labeled_data['mut'].columns = data_provider.labeled_data['mut'].columns + '_mut'
     data_provider.labeled_test_data['mut'].columns = data_provider.labeled_test_data['mut'].columns + '_mut'
