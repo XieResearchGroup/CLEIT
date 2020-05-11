@@ -37,18 +37,18 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
     best_loss = float('inf')
     tolerance_count = 0
 
-    if gradient_threshold is not None:
-        grad_norm = 0.
-
     for epoch in range(max_epoch):
         print('epoch: ', epoch)
+        grad_norm = 0.
+        counts = 0.
         for step, (x_batch_train, y_batch_train) in enumerate(train_dataset):
             with tf.GradientTape() as tape:
                 preds = auto_encoder(x_batch_train, training=True)
                 loss_value = loss_fn(y_batch_train, preds)
                 loss_value += sum(auto_encoder.losses)
                 grads = tape.gradient(loss_value, auto_encoder.trainable_variables)
-                grad_norm = tf.linalg.global_norm(grads)
+                grad_norm += tf.linalg.global_norm(grads)
+                counts += 1
                 optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables))
                 train_mse_metric(y_batch_train, preds)
                 train_mae_metric(y_batch_train, preds)
@@ -94,7 +94,7 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
                     break
 
         if gradient_threshold is not None:
-            if grad_norm < gradient_threshold:
+            if grad_norm / counts < gradient_threshold:
                 break
     if val_dataset is None:
         auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
@@ -172,10 +172,9 @@ def fine_tune_gex_encoder(encoder,
     lr = model_config.fine_tuning_lr
     regressor_tuning_flag = False
 
-    if gradient_threshold is not None:
+    for epoch in range(max_epoch):
         grad_norm = 0.
 
-    for epoch in range(max_epoch):
         # total_train_pearson = 0.
         # total_train_spearman = 0.
         # total_train_mse = 0.
@@ -229,7 +228,7 @@ def fine_tune_gex_encoder(encoder,
                     to_train_variables.extend(regressor.trainable_variables)
                     regressor_tuning_flag = True
                 grads = tape.gradient(loss_value, to_train_variables)
-                grad_norm = tf.linalg.global_norm(grads)
+                grad_norm += tf.linalg.global_norm(grads)
                 optimizer.apply_gradients(zip(grads, to_train_variables))
                 counts += 1.
 
@@ -270,6 +269,7 @@ def fine_tune_gex_encoder(encoder,
         training_history['spearman'].append(train_epoch_spearman / counts)
         training_history['mse'].append(train_epoch_mse / counts)
         training_history['mae'].append(train_epoch_mae / counts)
+        train_counts = counts
 
         if val_dataset is not None:
             val_epoch_loss = 0.
@@ -315,7 +315,7 @@ def fine_tune_gex_encoder(encoder,
                 # print(len(to_train_variables))
 
         if gradient_threshold is not None:
-            if grad_norm < gradient_threshold:
+            if grad_norm / train_counts < gradient_threshold:
                 break
 
     if val_dataset is None:
@@ -357,13 +357,13 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
         transmitter = module.MLPBlock(architecture=model_config.transmitter_architecture,
                                       act_fn=model_config.transmitter_act_fn,
                                       output_act_fn=model_config.transmitter_output_act_fn,
-                                      output_dim=model_config.transmitter_output_dim)
-    if gradient_threshold is not None:
-        grad_norm = 0.
+                                      output_dim=model_config.transmitter_output_dim,
+                                      name='transmitter')
 
     for epoch in range(max_epoch):
         total_train_loss = 0.
         total_train_steps = 0
+        grad_norm = 0.
 
         print('epoch: ', epoch)
         for step, (x_batch_train, y_batch_train, reference_x_batch_train) in enumerate(train_dataset):
@@ -395,7 +395,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
                 else:
                     grads = tape.gradient(loss_value, auto_encoder.trainable_variables)
                     optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables))
-                grad_norm = tf.linalg.global_norm(grads)
+                grad_norm += tf.linalg.global_norm(grads)
 
             if (step + 1) % 100 == 0:
                 print('Training loss (for one batch) at step %s: %s' % (step + 1, float(loss_value)))
@@ -444,7 +444,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
                     break
 
         if gradient_threshold is not None:
-            if grad_norm < gradient_threshold:
+            if grad_norm / float(total_train_steps) < gradient_threshold:
                 break
 
     if val_dataset is None:
@@ -496,9 +496,8 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
         transmitter = module.MLPBlock(architecture=model_config.transmitter_architecture,
                                       act_fn=model_config.transmitter_act_fn,
                                       output_act_fn=model_config.transmitter_output_act_fn,
-                                      output_dim=model_config.transmitter_output_dim)
-    if gradient_threshold is not None:
-        grad_norm = 0.
+                                      output_dim=model_config.transmitter_output_dim,
+                                      name='transmitter')
 
     train_loss_history = []
     train_gen_loss_history = []
@@ -512,6 +511,7 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
         total_train_loss = 0.
         total_train_gen_loss = 0.
         total_train_steps = 0
+        grad_norm = 0.
 
         print('epoch: ', epoch)
         for step, (x_batch_train, y_batch_train, reference_x_batch_train) in enumerate(train_dataset):
@@ -564,6 +564,7 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
                     else:
                         grads = tape.gradient(loss_value, auto_encoder.trainable_variables)
                         optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables))
+                    grad_norm += tf.linalg.global_norm(grads)
 
             if (step + 1) % 100 == 0:
                 print('Training loss (for one batch) at step %s: %s' % (step + 1, float(loss_value)))
@@ -621,7 +622,7 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
                     break
 
         if gradient_threshold is not None:
-            if grad_norm < gradient_threshold:
+            if grad_norm / (float(total_train_steps // n_critic)) < gradient_threshold:
                 break
 
     if val_dataset is None:
@@ -694,7 +695,8 @@ def fine_tune_mut_encoder(encoder, train_dataset,
         transmitter = module.MLPBlock(architecture=model_config.transmitter_architecture,
                                       act_fn=model_config.transmitter_act_fn,
                                       output_act_fn=model_config.transmitter_output_act_fn,
-                                      output_dim=model_config.transmitter_output_dim)
+                                      output_dim=model_config.transmitter_output_dim,
+                                      name='transmitter')
         transmitter.load_weights(os.path.join(output_folder, 'pre_trained_transmitter_weights'))
         if gradual_unfreezing_flag:
             transmitter.trainable = False
@@ -703,10 +705,9 @@ def fine_tune_mut_encoder(encoder, train_dataset,
     lr = model_config.fine_tuning_lr
     regressor_tuning_flag = False
 
-    if gradient_threshold is not None:
+    for epoch in range(max_epoch):
         grad_norm = 0.
 
-    for epoch in range(max_epoch):
         to_train_variables = encoder.trainable_variables
         if transmitter_flag:
             to_train_variables.extend(transmitter.trainable_variables)
@@ -768,7 +769,7 @@ def fine_tune_mut_encoder(encoder, train_dataset,
                     regressor_tuning_flag = True
 
                 grads = tape.gradient(loss_value, to_train_variables)
-                grad_norm = tf.linalg.global_norm(grads)
+                grad_norm += tf.linalg.global_norm(grads)
                 optimizer.apply_gradients(zip(grads, to_train_variables))
                 counts += 1
 
@@ -780,6 +781,7 @@ def fine_tune_mut_encoder(encoder, train_dataset,
         training_history['spearman'].append(train_epoch_spearman / counts)
         training_history['mse'].append(train_epoch_mse / counts)
         training_history['mae'].append(train_epoch_mae / counts)
+        train_counts = counts
 
         if val_dataset is not None:
             val_epoch_loss = 0.
@@ -822,7 +824,7 @@ def fine_tune_mut_encoder(encoder, train_dataset,
                                              save_format='tf')
 
         if gradient_threshold is not None:
-            if grad_norm < gradient_threshold:
+            if grad_norm / train_counts < gradient_threshold:
                 break
     if val_dataset is None:
         encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')

@@ -86,6 +86,7 @@ if __name__ == '__main__':
                            architecture=model_config.encoder_architecture,
                            noise_fn=keras.layers.GaussianNoise,
                            output_act_fn=keras.activations.relu,
+                           act_fn=model_config.encoder_act_fn,
                            kernel_regularizer_l=model_config.kernel_regularizer_l)
 
     gex_encoder, gex_pre_train_history_df = train.pre_train_gex_AE(auto_encoder=gex_auto_encoder,
@@ -147,6 +148,7 @@ if __name__ == '__main__':
                                    architecture=model_config.encoder_architecture,
                                    noise_fn=keras.layers.GaussianNoise,
                                    output_act_fn=keras.activations.relu,
+                                   act_fn=model_config.encoder_act_fn,
                                    kernel_regularizer_l=model_config.kernel_regularizer_l)
 
             mut_encoder, mut_pre_train_history_df = pre_train_mut_AE_fn(auto_encoder=mut_auto_encoder,
@@ -251,6 +253,7 @@ if __name__ == '__main__':
                                architecture=model_config.encoder_architecture,
                                noise_fn=keras.layers.GaussianNoise,
                                output_act_fn=keras.activations.relu,
+                               act_fn=model_config.encoder_act_fn,
                                kernel_regularizer_l=model_config.kernel_regularizer_l)
 
         mut_encoder, mut_pre_train_history_df = pre_train_mut_AE_fn(auto_encoder=mut_auto_encoder,
