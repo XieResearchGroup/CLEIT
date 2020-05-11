@@ -3,7 +3,7 @@ from tensorflow import keras
 encoder_architecture = [512, 256, 128]
 encoder_latent_dimension = 128
 encoder_act_fn = keras.activations.relu
-encoder_output_act_fn = keras.activations.relu
+encoder_output_act_fn = None
 
 #regressor module configurations
 regressor_architecture = [128, 128, 64, 16]
