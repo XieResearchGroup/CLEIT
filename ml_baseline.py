@@ -145,13 +145,13 @@ if __name__ == '__main__':
         except Exception as e:
             print(e)
 
-        # outer_kfold = KFold(n_splits=5, shuffle=True, random_state=2020)
-        # for train_index, test_index in outer_kfold.split(y):
-        #     X_mut_train, X_mut_test = X_mut.iloc[train_index, :], X_mut.iloc[test_index, :]
-        #     X_gex_train, X_gex_test = X_gex.iloc[train_index, :], X_gex.iloc[test_index, :]
-        #     X_train, X_test = X.iloc[train_index, :], X.iloc[test_index, :]
-        #
-        #     y_train, y_test = y[train_index], y[test_index]
+        outer_kfold = KFold(n_splits=5, shuffle=True, random_state=2020)
+        for train_index, test_index in outer_kfold.split(y):
+            X_mut_train, X_mut_test = X_mut.iloc[train_index, :], X_mut.iloc[test_index, :]
+            X_gex_train, X_gex_test = X_gex.iloc[train_index, :], X_gex.iloc[test_index, :]
+            X_train, X_test = X.iloc[train_index, :], X.iloc[test_index, :]
+
+            y_train, y_test = y[train_index], y[test_index]
         #
         #     #kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
         #     #cv_split = kfold.split(X_train)
@@ -163,27 +163,27 @@ if __name__ == '__main__':
         #     #except Exception as e:
         #     #    print(e)
         #
-        #     kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
-        #     cv_split = kfold.split(X_gex_train)
-        #     try:
-        #         print('Gex Training')
-        #         X_gex_train_scaler = data.standardize_scale(X_gex_train)
-        #         trained_model = model_fn(X_gex_train_scaler.transform(X_gex_train), y_train, list(cv_split))
-        #         prediction = trained_model.predict(X_gex_train_scaler.transform(X_gex_test))
-        #         gex_prediction_df.loc[y.index[test_index], drug] = prediction
-        #     except Exception as e:
-        #         print(e)
-        #
-        #     kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
-        #     cv_split = kfold.split(X_mut_train)
-        #     try:
-        #         print('Mutation Training')
-        #         X_mut_train_scaler = data.standardize_scale(X_mut_train)
-        #         trained_model = model_fn(X_mut_train_scaler.transform(X_mut_train), y_train, list(cv_split))
-        #         prediction = trained_model.predict(X_mut_train_scaler.transform(X_mut_test))
-        #         mut_prediction_df.loc[y.index[test_index], drug] = prediction
-        #     except Exception as e:
-        #         print(e)
+            kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
+            cv_split = kfold.split(X_gex_train)
+            try:
+                print('Gex Training')
+                X_gex_train_scaler = data.standardize_scale(X_gex_train)
+                trained_model = model_fn(X_gex_train_scaler.transform(X_gex_train), y_train, list(cv_split))
+                prediction = trained_model.predict(X_gex_train_scaler.transform(X_gex_test))
+                gex_prediction_df.loc[y.index[test_index], drug] = prediction
+            except Exception as e:
+                print(e)
+
+            kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
+            cv_split = kfold.split(X_mut_train)
+            try:
+                print('Mutation Training')
+                X_mut_train_scaler = data.standardize_scale(X_mut_train)
+                trained_model = model_fn(X_mut_train_scaler.transform(X_mut_train), y_train, list(cv_split))
+                prediction = trained_model.predict(X_mut_train_scaler.transform(X_mut_test))
+                mut_prediction_df.loc[y.index[test_index], drug] = prediction
+            except Exception as e:
+                print(e)
 
     mut_test_prediction_df.to_csv(os.path.join('predictions', args.target + '_' + args.method + '_mut_only_' + str(
         args.propagation) + '_' + args.filter + '_prediction.csv'),
@@ -193,10 +193,10 @@ if __name__ == '__main__':
     #     args.propagation) + '_' + args.filter + '_multi_regression_5fold_prediction.csv'),
     #                                 index_label='Sample')
     #
-    # gex_prediction_df.to_csv(os.path.join('predictions', args.target + '_' + args.method + '_gex_' + str(
-    #     args.propagation) + '_' + args.filter + '_multi_regression_5fold_prediction.csv'),
-    #                                 index_label='Sample')
-    #
-    # mut_prediction_df.to_csv(os.path.join('predictions', args.target + '_' + args.method + '_mut_' + str(
-    #     args.propagation) + '_' + args.filter + '_multi_regression_5fold_prediction.csv'),
-    #                                 index_label='Sample')
+    gex_prediction_df.to_csv(os.path.join('predictions', args.target + '_' + args.method + '_gex_' + str(
+        args.propagation) + '_' + args.filter + '_multi_regression_5fold_prediction.csv'),
+                                    index_label='Sample')
+
+    mut_prediction_df.to_csv(os.path.join('predictions', args.target + '_' + args.method + '_mut_' + str(
+        args.propagation) + '_' + args.filter + '_multi_regression_5fold_prediction.csv'),
+                                    index_label='Sample')
