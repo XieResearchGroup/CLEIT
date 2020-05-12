@@ -110,7 +110,7 @@ if __name__ == '__main__':
                            act_fn=model_config.encoder_act_fn,
                            kernel_regularizer_l=model_config.kernel_regularizer_l)
 
-    with open(os.path.join('history', 'history.pkl'), 'wb') as handle:
+    with open(os.path.join('history', 'history.pkl'), 'ab') as handle:
         pickle.dump(gex_fine_tune_train_history, handle)
         pickle.dump(gex_fine_tune_validation_history, handle)
 
@@ -131,7 +131,7 @@ if __name__ == '__main__':
     #                                                                train_dataset=train_dataset,
     #                                                                val_dataset=val_dataset,
     #                                                                )
-    with open(os.path.join('history', 'history.pkl'), 'wb') as handle:
+    with open(os.path.join('history', 'history.pkl'), 'ab') as handle:
         pickle.dump(mut_pre_train_history_df, handle)
 
     train_dataset = tf.data.Dataset.from_tensor_slices(
@@ -157,6 +157,6 @@ if __name__ == '__main__':
     #    target_df=data_provider.labeled_data['target'],
     #    raw_X=data_provider.labeled_data['mut'])
 
-    with open(os.path.join('history', 'history.pkl'), 'wb') as handle:
+    with open(os.path.join('history', 'history.pkl'), 'ab') as handle:
         pickle.dump(mut_fine_tune_train_history, handle)
         pickle.dump(mut_fine_tune_validation_history, handle)
