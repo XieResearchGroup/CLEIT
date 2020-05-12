@@ -11,7 +11,7 @@ def drug_wise_evaluation(truth_df, pred_df):
     per_drug_measurement = defaultdict(dict)
     for drug in truth_df.columns:
         samples = truth_df.index[~truth_df[drug].isna()]
-        if samples <=1:
+        if len(samples) <=1:
             per_drug_measurement['pearson'][drug] = np.nan
             per_drug_measurement['spearman'][drug] = np.nan
             per_drug_measurement['rmse'][drug] = np.nan

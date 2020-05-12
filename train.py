@@ -90,7 +90,7 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
             if epoch < min_epoch:
                 tolerance_count = 0
             else:
-                if tolerance_count > tolerance and gradient_threshold is None:
+                if tolerance_count > tolerance:
                     break
 
         if gradient_threshold is not None:
