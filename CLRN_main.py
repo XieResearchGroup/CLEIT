@@ -13,6 +13,7 @@ import model_config
 import argparse
 import predict
 import pandas as pd
+import numpy as np
 
 from tensorflow import keras
 from functools import partial

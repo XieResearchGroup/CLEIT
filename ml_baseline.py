@@ -39,8 +39,8 @@ def process_with_rf(train_features, y_train, cv_split_rf):
 def process_with_enet(train_features, y_train, cv_split_enet):
     try:
         # logger.debug("Training elastic net regression model")
-        alphas = np.logspace(-5, -1, num=5, endpoint=True)
-        l1_ratios = np.array([0.1, 1, 10])
+        l1_ratios = np.logspace(-5, -1, num=5, endpoint=True)
+        alphas = np.array([0.1, 1.0, 10])
         enet = ElasticNetCV(l1_ratio=l1_ratios, alphas=alphas, cv=cv_split_enet, n_jobs=-1, verbose=2,
                             normalize=True,
                             max_iter=10000)
@@ -133,9 +133,15 @@ if __name__ == '__main__':
         cv_split = outer_kfold.split(X_mut)
         try:
             print('Mutation-Only Training')
-            trained_model = model_fn(X_mut, y, list(cv_split))
-            prediction = trained_model.predict(data_provider.labeled_test_data['mut'])
-            mut_test_prediction_df.loc[data_provider.labeled_test_data['mut'].index, drug] = prediction
+            X_mut_scaler = data.standardize_scale(X_mut)
+
+            y_mut_only = data_provider.labeled_test_data['target'].loc[~data_provider.labeled_test_data['target'][drug].isna(), drug]
+            mut_only_sample_ids = data_provider.labeled_test_data['mut'].index.intersection(y_mut_only.index)
+            X_mut_only = data_provider.labeled_test_data['mut'].loc[mut_only_sample_ids,]
+
+            trained_model = model_fn(X_mut_scaler.transform(X_mut), y, list(cv_split))
+            prediction = trained_model.predict(X_mut_scaler.transform(X_mut))
+            mut_test_prediction_df.loc[X_mut_only.index, drug] = prediction
         except Exception as e:
             print(e)
 
@@ -161,8 +167,9 @@ if __name__ == '__main__':
             cv_split = kfold.split(X_gex_train)
             try:
                 print('Gex Training')
-                trained_model = model_fn(X_gex_train, y_train, list(cv_split))
-                prediction = trained_model.predict(X_gex_test)
+                X_gex_train_scaler = data.standardize_scale(X_gex_train)
+                trained_model = model_fn(X_gex_train_scaler.transform(X_gex_train), y_train, list(cv_split))
+                prediction = trained_model.predict(X_gex_train_scaler.transform(X_gex_test))
                 gex_prediction_df.loc[y.index[test_index], drug] = prediction
             except Exception as e:
                 print(e)
@@ -171,8 +178,9 @@ if __name__ == '__main__':
             cv_split = kfold.split(X_mut_train)
             try:
                 print('Mutation Training')
-                trained_model = model_fn(X_mut_train, y_train, list(cv_split))
-                prediction = trained_model.predict(X_mut_test)
+                X_mut_train_scaler = data.standardize_scale(X_mut_train)
+                trained_model = model_fn(X_mut_train_scaler.transform(X_mut_train), y_train, list(cv_split))
+                prediction = trained_model.predict(X_mut_train_scaler.transform(X_mut_test))
                 mut_prediction_df.loc[y.index[test_index], drug] = prediction
             except Exception as e:
                 print(e)
