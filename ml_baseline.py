@@ -60,7 +60,7 @@ def process_with_xgb(train_features, y_train, cv_split_xgb):
         }
         gbm = GridSearchCV(estimator=xgb.XGBRegressor(),
                            param_grid=xgb_tuning_parameters,
-                           scoring='reg:squarederror',
+                           scoring='neg_mean_squared_error',
                            cv=cv_split_xgb,
                            verbose=2,
                            n_jobs=-1)
