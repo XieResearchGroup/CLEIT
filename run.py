@@ -23,14 +23,15 @@ if __name__ == '__main__':
     parser.add_argument('--target', dest='target', nargs='?', default='AUC', choices=['AUC', 'LN_IC50'])
     parser.add_argument('--filter', dest='filter', nargs='?', default='FILE', choices=['MAD', 'FILE'])
     parser.add_argument('--feat_num', dest='feature_number', nargs='?', default=5000)
-    parser.add_argument('--clr_fn', dest='clr_fn', nargs='?', default='contrastive', choices=['contrastive', 'mmd','wgan', 'none'])
+    parser.add_argument('--clr_fn', dest='clr_fn', nargs='?', default='contrastive',
+                        choices=['contrastive', 'mmd', 'wgan', 'none'])
     parser.add_argument('--gpu', dest='gpu', type=int, nargs='?', default=0)
 
     args = parser.parse_args()
     data_provider = data.DataProvider(feature_filter=args.filter, target=args.target,
                                       feature_number=args.feature_number,
                                       omics=['gex', 'mut'])
-    #unlabeled gex has few small negative value
+    # unlabeled gex has few small negative value
     data_provider.unlabeled_data['gex'].where(data_provider.unlabeled_data['gex'] > 0, 0, inplace=True)
     assert data_provider.unlabeled_data['gex'].min().min() >= 0
 
@@ -41,7 +42,7 @@ if __name__ == '__main__':
     elif args.clr_fn == 'wgan':
         pre_train_mut_AE_fn = train.pre_train_mut_AE_with_GAN
     else:
-        pre_train_mut_AE_fn = partial(train.pre_train_mut_AE, alpha=0.)
+        pre_train_mut_AE_fn = partial(train.pre_train_mut_AE, transmission_loss_fn=loss.contrastive_loss, alpha=0.)
 
     tf.keras.backend.clear_session()
     gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -97,9 +98,12 @@ if __name__ == '__main__':
     #     pickle.dump(gex_fine_tune_validation_history, handle)
 
     train_dataset = tf.data.Dataset.from_tensor_slices(
-        (data_provider.unlabeled_data['mut'].loc[data_provider.matched_index].append(data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][0]]).values,
-         data_provider.unlabeled_data['mut'].loc[data_provider.matched_index].append(data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][0]]).values,
-         data_provider.unlabeled_data['gex'].loc[data_provider.matched_index].append(data_provider.labeled_data['gex'].iloc[data_provider.get_k_folds()[i][0]]).values))
+        (data_provider.unlabeled_data['mut'].loc[data_provider.matched_index].append(
+            data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][0]]).values,
+         data_provider.unlabeled_data['mut'].loc[data_provider.matched_index].append(
+             data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][0]]).values,
+         data_provider.unlabeled_data['gex'].loc[data_provider.matched_index].append(
+             data_provider.labeled_data['gex'].iloc[data_provider.get_k_folds()[i][0]]).values))
 
     val_dataset = tf.data.Dataset.from_tensor_slices(
         (data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][1]].values,
@@ -114,12 +118,11 @@ if __name__ == '__main__':
                            act_fn=model_config.encoder_act_fn,
                            kernel_regularizer_l=model_config.kernel_regularizer_l)
 
-
-    #mut_encoder = mut_auto_encoder.encoder
+    # mut_encoder = mut_auto_encoder.encoder
     mut_encoder, mut_pre_train_history_df = pre_train_mut_AE_fn(auto_encoder=mut_auto_encoder,
-                                                                   reference_encoder=gex_encoder,
-                                                                   train_dataset=train_dataset,
-                                                                   val_dataset=val_dataset)
+                                                                reference_encoder=gex_encoder,
+                                                                train_dataset=train_dataset,
+                                                                val_dataset=val_dataset)
 
     with open(os.path.join('history', 'pre_warm_regressor.pkl'), 'ab') as handle:
         pickle.dump(mut_pre_train_history_df, handle)
@@ -137,7 +140,6 @@ if __name__ == '__main__':
         val_dataset=val_dataset,
         regressor_flag=False
     )
-
 
     with open(os.path.join('history', 'pre_warm_regressor.pkl'), 'ab') as handle:
         pickle.dump(mut_fine_tune_train_history, handle)
