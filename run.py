@@ -147,7 +147,7 @@ if __name__ == '__main__':
         encoder=mut_encoder,
         train_dataset=train_dataset,
         val_dataset=val_dataset,
-        regressor_flag=True
+        regressor_flag=False
     )
 
     # mut_fine_tune_train_history, mut_fine_tune_validation_history = train.fine_tune_mut_encoder(
