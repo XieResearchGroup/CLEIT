@@ -24,7 +24,7 @@ def process_with_rf(train_features, y_train, cv_split_rf):
         # n_estimators: number of trees to use
         # n_jobs = -1 means to run the jobs in parallel
         rf_tuning_parameters = [{'n_estimators': [10, 100, 500], 'max_depth': [10, 50, 100]}]
-        #rf_tuning_parameters = [{'n_estimators': [5], 'max_depth': [10]}]
+        # rf_tuning_parameters = [{'n_estimators': [5], 'max_depth': [10]}]
         rf = GridSearchCV(RandomForestRegressor(min_samples_split=10), rf_tuning_parameters, n_jobs=-1, cv=cv_split_rf,
                           verbose=2)
         rf.fit(train_features, y_train)  # , groups=train_groups
@@ -104,8 +104,8 @@ if __name__ == '__main__':
     data_provider.labeled_test_data['mut'].columns = data_provider.labeled_test_data['mut'].columns + '_mut'
 
     mut_test_prediction_df = pd.DataFrame(np.full_like(data_provider.labeled_test_data['target'], fill_value=-1),
-                                     index=data_provider.labeled_test_data['target'].index,
-                                     columns=data_provider.labeled_test_data['target'].columns)
+                                          index=data_provider.labeled_test_data['target'].index,
+                                          columns=data_provider.labeled_test_data['target'].columns)
 
     mut_prediction_df = pd.DataFrame(np.full_like(data_provider.labeled_data['target'], fill_value=-1),
                                      index=data_provider.labeled_data['target'].index,
@@ -135,68 +135,75 @@ if __name__ == '__main__':
             print('Mutation-Only Training')
             X_mut_scaler = data.standardize_scale(X_mut)
 
-            y_mut_only = data_provider.labeled_test_data['target'].loc[~data_provider.labeled_test_data['target'][drug].isna(), drug]
+            y_mut_only = data_provider.labeled_test_data['target'].loc[
+                ~data_provider.labeled_test_data['target'][drug].isna(), drug]
+
             mut_only_sample_ids = data_provider.labeled_test_data['mut'].index.intersection(y_mut_only.index)
+
             X_mut_only = data_provider.labeled_test_data['mut'].loc[mut_only_sample_ids,]
 
             trained_model = model_fn(X_mut_scaler.transform(X_mut), y, list(cv_split))
+
             prediction = trained_model.predict(X_mut_scaler.transform(X_mut_only))
+
+            print(prediction)
+
             mut_test_prediction_df.loc[X_mut_only.index, drug] = prediction
         except Exception as e:
             print(e)
 
-        outer_kfold = KFold(n_splits=5, shuffle=True, random_state=2020)
-        for train_index, test_index in outer_kfold.split(y):
-            X_mut_train, X_mut_test = X_mut.iloc[train_index, :], X_mut.iloc[test_index, :]
-            X_gex_train, X_gex_test = X_gex.iloc[train_index, :], X_gex.iloc[test_index, :]
-            X_train, X_test = X.iloc[train_index, :], X.iloc[test_index, :]
-
-            y_train, y_test = y[train_index], y[test_index]
+        # outer_kfold = KFold(n_splits=5, shuffle=True, random_state=2020)
+        # for train_index, test_index in outer_kfold.split(y):
+        #     X_mut_train, X_mut_test = X_mut.iloc[train_index, :], X_mut.iloc[test_index, :]
+        #     X_gex_train, X_gex_test = X_gex.iloc[train_index, :], X_gex.iloc[test_index, :]
+        #     X_train, X_test = X.iloc[train_index, :], X.iloc[test_index, :]
         #
-        #     #kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
-        #     #cv_split = kfold.split(X_train)
-        #     #try:
-        #     #    print('Overlapped Training')
-        #     #    trained_model = model_fn(X_train, y, list(cv_split))
-        #     #    prediction = trained_model.predict(X_test)
-        #     #    overlapped_prediction_df.loc[y.index[test_index], drug] = prediction
-        #     #except Exception as e:
-        #     #    print(e)
+        #     y_train, y_test = y[train_index], y[test_index]
+        # #
+        # #     #kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
+        # #     #cv_split = kfold.split(X_train)
+        # #     #try:
+        # #     #    print('Overlapped Training')
+        # #     #    trained_model = model_fn(X_train, y, list(cv_split))
+        # #     #    prediction = trained_model.predict(X_test)
+        # #     #    overlapped_prediction_df.loc[y.index[test_index], drug] = prediction
+        # #     #except Exception as e:
+        # #     #    print(e)
+        # #
+        #     kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
+        #     cv_split = kfold.split(X_gex_train)
+        #     try:
+        #         print('Gex Training')
+        #         X_gex_train_scaler = data.standardize_scale(X_gex_train)
+        #         trained_model = model_fn(X_gex_train_scaler.transform(X_gex_train), y_train, list(cv_split))
+        #         prediction = trained_model.predict(X_gex_train_scaler.transform(X_gex_test))
+        #         gex_prediction_df.loc[y.index[test_index], drug] = prediction
+        #     except Exception as e:
+        #         print(e)
         #
-            kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
-            cv_split = kfold.split(X_gex_train)
-            try:
-                print('Gex Training')
-                X_gex_train_scaler = data.standardize_scale(X_gex_train)
-                trained_model = model_fn(X_gex_train_scaler.transform(X_gex_train), y_train, list(cv_split))
-                prediction = trained_model.predict(X_gex_train_scaler.transform(X_gex_test))
-                gex_prediction_df.loc[y.index[test_index], drug] = prediction
-            except Exception as e:
-                print(e)
-
-            kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
-            cv_split = kfold.split(X_mut_train)
-            try:
-                print('Mutation Training')
-                X_mut_train_scaler = data.standardize_scale(X_mut_train)
-                trained_model = model_fn(X_mut_train_scaler.transform(X_mut_train), y_train, list(cv_split))
-                prediction = trained_model.predict(X_mut_train_scaler.transform(X_mut_test))
-                mut_prediction_df.loc[y.index[test_index], drug] = prediction
-            except Exception as e:
-                print(e)
+        #     kfold = KFold(n_splits=3, shuffle=True, random_state=2020)
+        #     cv_split = kfold.split(X_mut_train)
+        #     try:
+        #         print('Mutation Training')
+        #         X_mut_train_scaler = data.standardize_scale(X_mut_train)
+        #         trained_model = model_fn(X_mut_train_scaler.transform(X_mut_train), y_train, list(cv_split))
+        #         prediction = trained_model.predict(X_mut_train_scaler.transform(X_mut_test))
+        #         mut_prediction_df.loc[y.index[test_index], drug] = prediction
+        #     except Exception as e:
+        #         print(e)
 
     mut_test_prediction_df.to_csv(os.path.join('predictions', args.target + '_' + args.method + '_mut_only_' + str(
         args.propagation) + '_' + args.filter + '_prediction.csv'),
-                                    index_label='Sample')
+                                  index_label='Sample')
 
     # overlapped_prediction_df.to_csv(os.path.join('predictions', args.target + '_' + args.method + '_both_' + str(
     #     args.propagation) + '_' + args.filter + '_multi_regression_5fold_prediction.csv'),
     #                                 index_label='Sample')
     #
-    gex_prediction_df.to_csv(os.path.join('predictions', args.target + '_' + args.method + '_gex_' + str(
-        args.propagation) + '_' + args.filter + '_multi_regression_5fold_prediction.csv'),
-                                    index_label='Sample')
-
-    mut_prediction_df.to_csv(os.path.join('predictions', args.target + '_' + args.method + '_mut_' + str(
-        args.propagation) + '_' + args.filter + '_multi_regression_5fold_prediction.csv'),
-                                    index_label='Sample')
+    # gex_prediction_df.to_csv(os.path.join('predictions', args.target + '_' + args.method + '_gex_' + str(
+    #     args.propagation) + '_' + args.filter + '_multi_regression_5fold_prediction.csv'),
+    #                                 index_label='Sample')
+    #
+    # mut_prediction_df.to_csv(os.path.join('predictions', args.target + '_' + args.method + '_mut_' + str(
+    #     args.propagation) + '_' + args.filter + '_multi_regression_5fold_prediction.csv'),
+    #                                 index_label='Sample')
