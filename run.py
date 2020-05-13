@@ -138,7 +138,7 @@ if __name__ == '__main__':
         encoder=mut_encoder,
         train_dataset=train_dataset,
         val_dataset=val_dataset,
-        regressor_flag=False
+        regressor_flag=True
     )
 
     with open(os.path.join('history', 'pre_warm_regressor.pkl'), 'ab') as handle:
