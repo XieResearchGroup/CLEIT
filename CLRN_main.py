@@ -61,7 +61,7 @@ if __name__ == '__main__':
     elif args.clr_fn == 'wgan':
         pre_train_mut_AE_fn = train.pre_train_mut_AE_with_GAN
     else:
-        pre_train_mut_AE_fn = partial(train.pre_train_mut_AE, alpha=0.)
+        pre_train_mut_AE_fn = partial(train.pre_train_mut_AE, transmission_loss_fn=loss.contrastive_loss, alpha=0.)
 
     tf.keras.backend.clear_session()
     gpus = tf.config.experimental.list_physical_devices('GPU')
