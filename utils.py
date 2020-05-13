@@ -2,6 +2,24 @@ import os
 import pandas as pd
 #import matplotlib.pyplot as plt
 
+import traceback
+import contextlib
+
+# Some helper code to demonstrate the kinds of errors you might encounter.
+@contextlib.contextmanager
+def assert_raises(error_class):
+  try:
+    yield
+  except error_class as e:
+    print('Caught expected exception \n  {}:'.format(error_class))
+    traceback.print_exc(limit=2)
+  except Exception as e:
+    raise e
+  else:
+    raise Exception('Expected {} to be raised but no error was raised!'.format(
+        error_class))
+
+
 def plot_learning_curve(train_loss, val_loss, metric_name='mse'):
     plt.plot(train_loss, color='r')
     plt.plot(val_loss, color='b')

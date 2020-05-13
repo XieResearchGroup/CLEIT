@@ -36,6 +36,17 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
     train_mae_list = []
     best_loss = float('inf')
     tolerance_count = 0
+    #
+    # @tf.function
+    # def train_step(x_batch_train, y_batch_train):
+    #     nonlocal grad_norm
+    #     with tf.GradientTape() as tape:
+    #         preds = auto_encoder(x_batch_train, training=True)
+    #         loss_value = loss_fn(y_batch_train, preds)
+    #         loss_value += sum(auto_encoder.losses)
+    #     grads = tape.gradient(loss_value, auto_encoder.trainable_variables)
+    #     optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables))
+    #     grad_norm += tf.linalg.global_norm(grads)
 
     for epoch in range(max_epoch):
         print('epoch: ', epoch)
@@ -48,10 +59,11 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
                 loss_value += sum(auto_encoder.losses)
                 grads = tape.gradient(loss_value, auto_encoder.trainable_variables)
                 grad_norm += tf.linalg.global_norm(grads)
-                counts += 1
-                optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables))
-                train_mse_metric(y_batch_train, preds)
-                train_mae_metric(y_batch_train, preds)
+            optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables))
+            train_step(x_batch_train=x_batch_train, y_batch_train=y_batch_train)
+            counts += 1
+            train_mse_metric(y_batch_train, preds)
+            train_mae_metric(y_batch_train, preds)
 
             if (step + 1) % 100 == 0:
                 print('Training loss (for one batch) at step %s: %s' % (step + 1, float(loss_value)))
@@ -652,6 +664,7 @@ def fine_tune_mut_encoder(encoder, train_dataset,
                           regressor_act_fn=model_config.regressor_act_fn,
                           regressor_output_dim=model_config.regressor_output_dim,
                           regressor_output_act_fn=model_config.regressor_output_act_fn,
+                          regressor_flag=True,
                           transmitter_flag=False,
                           loss_fn=penalized_mean_squared_error,
                           validation_monitoring_metric='pearson',
@@ -688,8 +701,8 @@ def fine_tune_mut_encoder(encoder, train_dataset,
                                         act_fn=regressor_act_fn,
                                         output_act_fn=regressor_output_act_fn,
                                         output_dim=regressor_output_dim)
-
-    regressor.load_weights(os.path.join(reference_folder, 'regressor_weights'))
+    if regressor_flag:
+        regressor.load_weights(os.path.join(reference_folder, 'regressor_weights'))
 
     if transmitter_flag:
         transmitter = module.MLPBlock(architecture=model_config.transmitter_architecture,

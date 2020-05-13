@@ -83,8 +83,24 @@ def bootstrap_baseline_random_results_drug_wise(truth_df, B=1000):
 
 
 
+def bootstrap_baseline_random_results_cell_wise(truth_df, B=1000):
+    measurement_df = None
+    for _ in range(B):
+        pred_df = pd.DataFrame(np.random.uniform(size=truth_df.shape),
+                               index=truth_df.index,
+                               columns=truth_df.columns)
+        temp_df = cell_wise_evaluation(truth_df=truth_df, pred_df=pred_df)
 
+        if measurement_df is None:
+            measurement_df=temp_df.mean()
+        else:
+            measurement_df = pd.concat([measurement_df, temp_df.mean()], axis=1)
 
+    # random_guess_base_df = pd.DataFrame(np.full_like(truth_df, fill_value=-1),
+    #                                     index=truth_df.index,
+    #                                     columns=truth_df.columns)
+    random_guess_base_df = truth_df.transpose().assign(**truth_df.mean(axis=1).to_dict()).transpose()
+    return measurement_df.mean(axis=1), cell_wise_evaluation(truth_df=truth_df, pred_df=random_guess_base_df).mean()
 
 
 
