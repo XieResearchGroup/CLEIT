@@ -123,18 +123,18 @@ if __name__ == '__main__':
     #                                                                transmission_loss_fn=loss.contrastive_loss
     #                                                                )
 
-    #mut_encoder = mut_auto_encoder.encoder
-    mut_encoder, mut_pre_train_history_df = pre_train_mut_AE_fn(auto_encoder=mut_auto_encoder,
-                                                                   reference_encoder=gex_encoder,
-                                                                   train_dataset=train_dataset,
-                                                                   val_dataset=val_dataset)
-    mut_encoder, mut_pre_train_history_df = train.pre_train_mut_AE_with_GAN(auto_encoder=mut_auto_encoder,
-                                                                   reference_encoder=gex_encoder,
-                                                                   train_dataset=train_dataset,
-                                                                   val_dataset=val_dataset,
-                                                                   )
-    with open(os.path.join('history', 'history.pkl'), 'ab') as handle:
-        pickle.dump(mut_pre_train_history_df, handle)
+    mut_encoder = mut_auto_encoder.encoder
+    # mut_encoder, mut_pre_train_history_df = pre_train_mut_AE_fn(auto_encoder=mut_auto_encoder,
+    #                                                                reference_encoder=gex_encoder,
+    #                                                                train_dataset=train_dataset,
+    #                                                                val_dataset=val_dataset)
+    # mut_encoder, mut_pre_train_history_df = train.pre_train_mut_AE_with_GAN(auto_encoder=mut_auto_encoder,
+    #                                                                reference_encoder=gex_encoder,
+    #                                                                train_dataset=train_dataset,
+    #                                                                val_dataset=val_dataset,
+    #                                                                )
+    # with open(os.path.join('history', 'history.pkl'), 'ab') as handle:
+    #     pickle.dump(mut_pre_train_history_df, handle)
 
     train_dataset = tf.data.Dataset.from_tensor_slices(
         (data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][0]].values,
@@ -160,6 +160,6 @@ if __name__ == '__main__':
     #    target_df=data_provider.labeled_data['target'],
     #    raw_X=data_provider.labeled_data['mut'])
 
-    with open(os.path.join('history', 'local_history.pkl'), 'ab') as handle:
+    with open(os.path.join('history', 'regressor.pkl'), 'ab') as handle:
         pickle.dump(mut_fine_tune_train_history, handle)
         pickle.dump(mut_fine_tune_validation_history, handle)
