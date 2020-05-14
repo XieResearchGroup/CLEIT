@@ -146,9 +146,9 @@ if __name__ == '__main__':
 
             prediction = trained_model.predict(X_mut_scaler.transform(X_mut_only))
 
-            print(prediction)
-
             mut_test_prediction_df.loc[X_mut_only.index, drug] = prediction
+         #   print(mut_test_prediction_df.loc[X_mut_only.index, drug])
+         #   print(X_mut_only.index)
         except Exception as e:
             print(e)
 

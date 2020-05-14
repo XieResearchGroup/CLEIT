@@ -23,7 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('--target', dest='target', nargs='?', default='AUC', choices=['AUC', 'LN_IC50'])
     parser.add_argument('--filter', dest='filter', nargs='?', default='FILE', choices=['MAD', 'FILE'])
     parser.add_argument('--feat_num', dest='feature_number', nargs='?', default=5000)
-    parser.add_argument('--clr_fn', dest='clr_fn', nargs='?', default='contrastive',
+    parser.add_argument('--clr_fn', dest='clr_fn', nargs='?', default='mmd',
                         choices=['contrastive', 'mmd', 'wgan', 'none'])
     parser.add_argument('--gpu', dest='gpu', type=int, nargs='?', default=0)
 
@@ -58,10 +58,12 @@ if __name__ == '__main__':
             # Memory growth must be set before GPUs have been initialized
             print(e)
 
-    # train_dataset = tf.data.Dataset.from_tensor_slices(
-    #     (data_provider.unlabeled_data['gex'].values, data_provider.unlabeled_data['gex'].values))
-    # val_dataset = tf.data.Dataset.from_tensor_slices(
-    #     (data_provider.labeled_data['gex'].values, data_provider.labeled_data['gex'].values))
+    history_name = 'history_'+args.clr_fn + '_' + str(args.transmitter_flag)+'.pkl'
+
+    train_dataset = tf.data.Dataset.from_tensor_slices(
+        (data_provider.unlabeled_data['gex'].values, data_provider.unlabeled_data['gex'].values))
+    val_dataset = tf.data.Dataset.from_tensor_slices(
+        (data_provider.labeled_data['gex'].values, data_provider.labeled_data['gex'].values))
 
     gex_auto_encoder = VAE(latent_dim=model_config.encoder_latent_dimension,
                            output_dim=data_provider.shape_dict['gex'],
@@ -71,44 +73,44 @@ if __name__ == '__main__':
                            act_fn=model_config.encoder_act_fn,
                            kernel_regularizer_l=model_config.kernel_regularizer_l)
 
-    gex_encoder = gex_auto_encoder.encoder
-    # gex_encoder, gex_pre_train_history_df = train.pre_train_gex_AE(auto_encoder=gex_auto_encoder,
-    #                                                                train_dataset=train_dataset,
-    #                                                                val_dataset=val_dataset)
-    #
-    # utils.safe_make_dir('history')
-    # with open(os.path.join('history', 'history.pkl'), 'ab') as handle:
-    #     pickle.dump(gex_pre_train_history_df, handle)
-    #
+    #gex_encoder = gex_auto_encoder.encoder
+    gex_encoder, gex_pre_train_history_df = train.pre_train_gex_AE(auto_encoder=gex_auto_encoder,
+                                                                   train_dataset=train_dataset,
+                                                                   val_dataset=val_dataset)
+
+    utils.safe_make_dir('history')
+    with open(os.path.join('history', history_name), 'ab') as handle:
+        pickle.dump(gex_pre_train_history_df, handle)
+
     i = 0
-    # train_dataset = tf.data.Dataset.from_tensor_slices(
-    #     (data_provider.labeled_data['gex'].iloc[data_provider.get_k_folds()[i][0]].values,
-    #      data_provider.labeled_data['target'].iloc[data_provider.get_k_folds()[i][0]].values))
-    # val_dataset = tf.data.Dataset.from_tensor_slices(
-    #     (data_provider.labeled_data['gex'].iloc[data_provider.get_k_folds()[i][1]].values,
-    #      data_provider.labeled_data['target'].iloc[data_provider.get_k_folds()[i][1]].values))
-    #
-    # gex_fine_tune_train_history, gex_fine_tune_validation_history = train.fine_tune_gex_encoder(
-    #     encoder=gex_encoder,
-    #     train_dataset=train_dataset,
-    #     val_dataset=val_dataset)
+    train_dataset = tf.data.Dataset.from_tensor_slices(
+        (data_provider.labeled_data['gex'].iloc[data_provider.get_k_folds()[i][0]].values,
+         data_provider.labeled_data['target'].iloc[data_provider.get_k_folds()[i][0]].values))
+    val_dataset = tf.data.Dataset.from_tensor_slices(
+        (data_provider.labeled_data['gex'].iloc[data_provider.get_k_folds()[i][1]].values,
+         data_provider.labeled_data['target'].iloc[data_provider.get_k_folds()[i][1]].values))
 
-    # with open(os.path.join('history', 'history.pkl'), 'ab') as handle:
-    #     pickle.dump(gex_fine_tune_train_history, handle)
-    #     pickle.dump(gex_fine_tune_validation_history, handle)
+    gex_fine_tune_train_history, gex_fine_tune_validation_history = train.fine_tune_gex_encoder(
+        encoder=gex_encoder,
+        train_dataset=train_dataset,
+        val_dataset=val_dataset)
 
-    # train_dataset = tf.data.Dataset.from_tensor_slices(
-    #     (data_provider.unlabeled_data['mut'].loc[data_provider.matched_index].append(
-    #         data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][0]]).values,
-    #      data_provider.unlabeled_data['mut'].loc[data_provider.matched_index].append(
-    #          data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][0]]).values,
-    #      data_provider.unlabeled_data['gex'].loc[data_provider.matched_index].append(
-    #          data_provider.labeled_data['gex'].iloc[data_provider.get_k_folds()[i][0]]).values))
-    #
-    # val_dataset = tf.data.Dataset.from_tensor_slices(
-    #     (data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][1]].values,
-    #      data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][1]].values,
-    #      data_provider.labeled_data['gex'].iloc[data_provider.get_k_folds()[i][1]].values))
+    with open(os.path.join('history', history_name), 'ab') as handle:
+        pickle.dump(gex_fine_tune_train_history, handle)
+        pickle.dump(gex_fine_tune_validation_history, handle)
+
+    train_dataset = tf.data.Dataset.from_tensor_slices(
+        (data_provider.unlabeled_data['mut'].loc[data_provider.matched_index].append(
+            data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][0]]).values,
+         data_provider.unlabeled_data['mut'].loc[data_provider.matched_index].append(
+             data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][0]]).values,
+         data_provider.unlabeled_data['gex'].loc[data_provider.matched_index].append(
+             data_provider.labeled_data['gex'].iloc[data_provider.get_k_folds()[i][0]]).values))
+
+    val_dataset = tf.data.Dataset.from_tensor_slices(
+        (data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][1]].values,
+         data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][1]].values,
+         data_provider.labeled_data['gex'].iloc[data_provider.get_k_folds()[i][1]].values))
 
     mut_auto_encoder = VAE(latent_dim=model_config.encoder_latent_dimension,
                            output_dim=data_provider.shape_dict['mut'],
@@ -118,15 +120,15 @@ if __name__ == '__main__':
                            act_fn=model_config.encoder_act_fn,
                            kernel_regularizer_l=model_config.kernel_regularizer_l)
 
-    mut_encoder = mut_auto_encoder.encoder
-    mut_encoder.load_weights('saved_weights/mut/cv/stochastic_512_256_128_128_encoder_weights/pre_trained_encoder_weights')
-    # mut_encoder, mut_pre_train_history_df = pre_train_mut_AE_fn(auto_encoder=mut_auto_encoder,
-    #                                                             reference_encoder=gex_encoder,
-    #                                                             train_dataset=train_dataset,
-    #                                                             val_dataset=val_dataset)
+    #mut_encoder = mut_auto_encoder.encoder
+    #mut_encoder.load_weights('saved_weights/mut/cv/stochastic_512_256_128_128_encoder_weights/pre_trained_encoder_weights')
+    mut_encoder, mut_pre_train_history_df = pre_train_mut_AE_fn(auto_encoder=mut_auto_encoder,
+                                                                reference_encoder=gex_encoder,
+                                                                train_dataset=train_dataset,
+                                                                val_dataset=val_dataset)
     #
-    # with open(os.path.join('history', 'pre_warm_regressor.pkl'), 'ab') as handle:
-    #     pickle.dump(mut_pre_train_history_df, handle)
+    with open(os.path.join('history', history_name), 'ab') as handle:
+        pickle.dump(mut_pre_train_history_df, handle)
 
     train_dataset = tf.data.Dataset.from_tensor_slices(
         (data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][0]].values,
@@ -142,6 +144,6 @@ if __name__ == '__main__':
         regressor_flag=True
     )
 
-    with open(os.path.join('history', 'pre_warm_regressor.pkl'), 'ab') as handle:
+    with open(os.path.join('history', history_name), 'ab') as handle:
         pickle.dump(mut_fine_tune_train_history, handle)
         pickle.dump(mut_fine_tune_validation_history, handle)

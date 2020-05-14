@@ -15,7 +15,7 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
                      loss_fn=keras.losses.MeanSquaredError(),
                      min_epoch=model_config.min_epoch,
                      max_epoch=model_config.max_epoch,
-                     tolerance=10,
+                     tolerance=30,
                      diff_threshold=1e-2,
                      gradient_threshold=model_config.gradient_threshold):
     output_folder = os.path.join('saved_weights', 'gex', repr(auto_encoder.encoder) + '_encoder_weights')
@@ -180,7 +180,8 @@ def fine_tune_gex_encoder(encoder,
                                         shared_layer_num=regressor_shared_layer_num,
                                         act_fn=regressor_act_fn,
                                         output_act_fn=regressor_output_act_fn,
-                                        output_dim=regressor_output_dim)
+                                        output_dim=regressor_output_dim,
+                                        kernel_regularizer_l=model_config.kernel_regularizer_l)
     lr = model_config.fine_tuning_lr
     regressor_tuning_flag = False
 
@@ -370,6 +371,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
                                       act_fn=model_config.transmitter_act_fn,
                                       output_act_fn=model_config.transmitter_output_act_fn,
                                       output_dim=model_config.transmitter_output_dim,
+                                      kernel_regularizer_l=model_config.kernel_regularizer_l,
                                       name='transmitter')
 
     for epoch in range(max_epoch):
@@ -509,6 +511,7 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
                                       act_fn=model_config.transmitter_act_fn,
                                       output_act_fn=model_config.transmitter_output_act_fn,
                                       output_dim=model_config.transmitter_output_dim,
+                                      kernel_regularizer_l=model_config.kernel_regularizer_l,
                                       name='transmitter')
 
     train_loss_history = []
@@ -700,6 +703,7 @@ def fine_tune_mut_encoder(encoder, train_dataset,
                                         shared_layer_num=regressor_shared_layer_num,
                                         act_fn=regressor_act_fn,
                                         output_act_fn=regressor_output_act_fn,
+                                        kernel_regularizer_l=model_config.kernel_regularizer_l,
                                         output_dim=regressor_output_dim)
     if regressor_flag:
         regressor.load_weights(os.path.join(reference_folder, 'regressor_weights'))
@@ -709,6 +713,7 @@ def fine_tune_mut_encoder(encoder, train_dataset,
                                       act_fn=model_config.transmitter_act_fn,
                                       output_act_fn=model_config.transmitter_output_act_fn,
                                       output_dim=model_config.transmitter_output_dim,
+                                      kernel_regularizer_l=model_config.kernel_regularizer_l,
                                       name='transmitter')
         transmitter.load_weights(os.path.join(output_folder, 'pre_trained_transmitter_weights'))
         if gradual_unfreezing_flag:

@@ -17,15 +17,15 @@ transmitter_act_fn = keras.activations.relu
 transmitter_output_act_fn = None
 transmitter_output_dim = encoder_latent_dimension
 #learning configurations
-kernel_regularizer_l = 0.0001
-pre_training_lr = 5e-4
-fine_tuning_lr = 1e-4
+kernel_regularizer_l = 0.001
+pre_training_lr = 1e-3
+fine_tuning_lr = 5e-4
 decay = 0.8
-max_epoch = 1000
-min_epoch = 200
+max_epoch = 400
+min_epoch = 100
 gradual_unfreezing_flag = True
-unfrozen_epoch = 50
+unfrozen_epoch = 40
 batch_size = 64
-alpha = 0.5
-gradient_threshold = 1e-3
+alpha = 1.0
+gradient_threshold = None
 
