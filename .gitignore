@@ -4,3 +4,4 @@ multi-omics-data-processing/*
 *.ipynb
 figs/*.ps
 predictions/
+history/
