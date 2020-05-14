@@ -26,6 +26,9 @@ if __name__ == '__main__':
     parser.add_argument('--clr_fn', dest='clr_fn', nargs='?', default='mmd',
                         choices=['contrastive', 'mmd', 'wgan', 'none'])
     parser.add_argument('--gpu', dest='gpu', type=int, nargs='?', default=0)
+    parser.add_argument('--transmitter', dest='transmitter_flag', action='store_true')
+    parser.add_argument('--no-transmitter', dest='transmitter_flag', action='store_false')
+    parser.set_defaults(transmitter_flag=False)
 
     args = parser.parse_args()
     data_provider = data.DataProvider(feature_filter=args.filter, target=args.target,
