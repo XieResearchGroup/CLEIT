@@ -60,7 +60,7 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
                 grads = tape.gradient(loss_value, auto_encoder.trainable_variables)
                 grad_norm += tf.linalg.global_norm(grads)
             optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables))
-            train_step(x_batch_train=x_batch_train, y_batch_train=y_batch_train)
+            #train_step(x_batch_train=x_batch_train, y_batch_train=y_batch_train)
             counts += 1
             train_mse_metric(y_batch_train, preds)
             train_mae_metric(y_batch_train, preds)
