@@ -15,7 +15,7 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
                      loss_fn=keras.losses.MeanSquaredError(),
                      min_epoch=model_config.min_epoch,
                      max_epoch=model_config.max_epoch,
-                     tolerance=30,
+                     tolerance=10,
                      diff_threshold=1e-2,
                      gradient_threshold=model_config.gradient_threshold):
     output_folder = os.path.join('saved_weights', 'gex', repr(auto_encoder.encoder) + '_encoder_weights')
@@ -65,7 +65,7 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
             train_mse_metric(y_batch_train, preds)
             train_mae_metric(y_batch_train, preds)
 
-            if (step + 1) % 100 == 0:
+            if (step + 1) % 10 == 0:
                 print('Training loss (for one batch) at step %s: %s' % (step + 1, float(loss_value)))
                 print('Seen so far: %s samples' % ((step + 1) * batch_size))
 
@@ -156,9 +156,10 @@ def fine_tune_gex_encoder(encoder,
     training_history = defaultdict(list)
     validation_history = defaultdict(list)
 
-    free_layers = len(encoder.layers)
+    num_encoder_layers = len(encoder.layers)
     if repr(encoder).startswith('stochastic'):
-        free_layers -= 1
+        num_encoder_layers -= 1
+    free_layers = num_encoder_layers
 
     encoder.trainable = False
     # shared_regressor_module = module.MLPBlock(architecture=model_config.shared_regressor_architecture,
@@ -203,7 +204,7 @@ def fine_tune_gex_encoder(encoder,
                 if (epoch - min_epoch) % unfrozen_epoch == 0:
                     free_layers -= 1
                     lr *= model_config.decay
-                for i in range(len(encoder.layers) - 1, free_layers - 1, -1):
+                for i in range(num_encoder_layers, free_layers - 1, -1):
                     to_train_variables.extend(encoder.layers[i].trainable_variables)
                 if free_layers <= 0:
                     gradual_unfreezing_flag = False
@@ -411,7 +412,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
                     optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables))
                 grad_norm += tf.linalg.global_norm(grads)
 
-            if (step + 1) % 100 == 0:
+            if (step + 1) % 10 == 0:
                 print('Training loss (for one batch) at step %s: %s' % (step + 1, float(loss_value)))
                 print('Seen so far: %s samples' % ((step + 1) * batch_size))
         train_loss_history.append(total_train_loss / float(total_train_steps))
@@ -581,7 +582,7 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
                         optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables))
                     grad_norm += tf.linalg.global_norm(grads)
 
-            if (step + 1) % 100 == 0:
+            if (step + 1) % 10 == 0:
                 print('Training loss (for one batch) at step %s: %s' % (step + 1, float(loss_value)))
                 print('Seen so far: %s samples' % ((step + 1) * batch_size))
 
@@ -692,9 +693,10 @@ def fine_tune_mut_encoder(encoder, train_dataset,
     training_history = defaultdict(list)
     validation_history = defaultdict(list)
 
-    free_encoder_layers = len(encoder.layers)
+    num_encoder_layers = len(encoder.layers)
     if repr(encoder).startswith('stochastic'):
-        free_encoder_layers -= 1
+        num_encoder_layers -= 1
+    free_layers = num_encoder_layers
 
     if gradual_unfreezing_flag:
         encoder.trainable = False
@@ -736,7 +738,7 @@ def fine_tune_mut_encoder(encoder, train_dataset,
                     if (epoch - min_epoch) % unfrozen_epoch == 0:
                         free_transmitter_layers -= 1
                         lr *= model_config.decay
-                    for i in range(len(transmitter.layers) - 1, free_transmitter_layers - 1, -1):
+                    for i in range(num_encoder_layers, free_transmitter_layers - 1, -1):
                         to_train_variables.extend(transmitter.layers[i].trainable_variables)
                     if free_transmitter_layers <= 0:
                         transmitter.trainable = True

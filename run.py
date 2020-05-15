@@ -71,7 +71,7 @@ if __name__ == '__main__':
     gex_auto_encoder = VAE(latent_dim=model_config.encoder_latent_dimension,
                            output_dim=data_provider.shape_dict['gex'],
                            architecture=model_config.encoder_architecture,
-                           noise_fn=keras.layers.GaussianNoise,
+                           noise_fn=None,
                            output_act_fn=keras.activations.relu,
                            act_fn=model_config.encoder_act_fn,
                            kernel_regularizer_l=model_config.kernel_regularizer_l)
@@ -79,7 +79,8 @@ if __name__ == '__main__':
     #gex_encoder = gex_auto_encoder.encoder
     gex_encoder, gex_pre_train_history_df = train.pre_train_gex_AE(auto_encoder=gex_auto_encoder,
                                                                    train_dataset=train_dataset,
-                                                                   val_dataset=val_dataset)
+                                                                   val_dataset=val_dataset,
+                                                                   batch_size=128)
 
     utils.safe_make_dir('history')
     with open(os.path.join('history', history_name), 'ab') as handle:
@@ -118,7 +119,7 @@ if __name__ == '__main__':
     mut_auto_encoder = VAE(latent_dim=model_config.encoder_latent_dimension,
                            output_dim=data_provider.shape_dict['mut'],
                            architecture=model_config.encoder_architecture,
-                           noise_fn=keras.layers.GaussianNoise,
+                           noise_fn=None,
                            output_act_fn=keras.activations.relu,
                            act_fn=model_config.encoder_act_fn,
                            kernel_regularizer_l=model_config.kernel_regularizer_l)
@@ -128,7 +129,8 @@ if __name__ == '__main__':
     mut_encoder, mut_pre_train_history_df = pre_train_mut_AE_fn(auto_encoder=mut_auto_encoder,
                                                                 reference_encoder=gex_encoder,
                                                                 train_dataset=train_dataset,
-                                                                val_dataset=val_dataset)
+                                                                val_dataset=val_dataset,
+                                                                batch_size=128)
     #
     with open(os.path.join('history', history_name), 'ab') as handle:
         pickle.dump(mut_pre_train_history_df, handle)
