@@ -109,16 +109,16 @@ class DataProvider:
 
         target_dat = preprocess_ccle_gdsc_utils.preprocess_target_data()
 
-        # target_samples = list(
-        #      set(gex_dat.index.to_list()) & set(mut_dat.index.to_list()) & set(target_dat.index.to_list()))
-        # mut_only_target_samples = list(
-        #      set(mut_dat.index.to_list()) & set(target_dat.index.to_list()) - set(gex_dat.index.to_list()))
+        target_samples = list(
+             set(gex_dat.index.to_list()) & set(mut_dat.index.to_list()) & set(target_dat.index.to_list()))
+        mut_only_target_samples = list(
+             set(mut_dat.index.to_list()) & set(target_dat.index.to_list()) - set(gex_dat.index.to_list()))
 
         #
-        target_samples = list(
-            set(gex_dat.index.tolist()) & set(mut_dat.index.tolist()) & set(target_dat.index.tolist()))
-        mut_only_target_samples = list(
-            set(mut_dat.index.tolist()) & set(target_dat.index.tolist()) - set(gex_dat.index.tolist()))
+        # target_samples = list(
+        #     set(gex_dat.index.tolist()) & set(mut_dat.index.tolist()) & set(target_dat.index.tolist()))
+        # mut_only_target_samples = list(
+        #     set(mut_dat.index.tolist()) & set(target_dat.index.tolist()) - set(gex_dat.index.tolist()))
 
         labeled_gex_dat = gex_dat.loc[target_samples, :]
         labeled_mut_dat = mut_dat.loc[target_samples, :]

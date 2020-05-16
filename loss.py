@@ -5,6 +5,7 @@ import tensorflow as tf
 from functools import partial
 from tensorflow.keras.losses import mean_squared_error, mean_absolute_error
 
+
 # def penalized_mean_squared_error(y_true, y_pred, penalty=True):
 #     y_pred = tf.squeeze(y_pred)
 #     loss = tf.reduce_mean(tf.losses.mean_squared_error(y_pred, y_true))
@@ -25,7 +26,7 @@ def penalized_mean_squared_error(y_true, y_pred, penalty=True):
         truth = tf.cast(truth, dtype=tf.float32)
         pred = tf.squeeze(tf.boolean_mask(tensor=y_pred, mask=mask))
         pred = tf.cast(pred, dtype=tf.float32)
-        if k>=2.:
+        if k >= 2.:
             loss = tf.losses.mean_squared_error(truth, pred)
             if penalty_flag:
                 penalty = tf.reduce_sum(tf.square(truth - pred)) / tf.square(k)
@@ -33,7 +34,9 @@ def penalized_mean_squared_error(y_true, y_pred, penalty=True):
         else:
             loss = tf.constant(-10., dtype=tf.float32)
         return loss
-    result = tf.map_fn(lambda x: _get_masked_mse(x), elems=(tf.transpose(y_true), tf.transpose(y_pred)), dtype=tf.float32)
+
+    result = tf.map_fn(lambda x: _get_masked_mse(x), elems=(tf.transpose(y_true), tf.transpose(y_pred)),
+                       dtype=tf.float32)
     result_mask = tf.greater(result, -10.)
     result = tf.squeeze(tf.boolean_mask(tensor=result, mask=result_mask))
     return tf.reduce_mean(result)
@@ -48,17 +51,19 @@ def pearson_correlation(y_true, y_pred):
         truth = tf.cast(truth, dtype=tf.float32)
         pred = tf.squeeze(tf.boolean_mask(tensor=y_pred, mask=mask))
         pred = tf.cast(pred, dtype=tf.float32)
-        #y_true = tf.constant(y_true)
-        if k>=2.:
+        # y_true = tf.constant(y_true)
+        if k >= 2.:
             denominator = tf.reduce_mean(tf.multiply(truth - tf.reduce_mean(truth), pred - tf.reduce_mean(pred)))
             nominator = tf.sqrt(tf.nn.moments(truth, axes=0)[1]) * tf.sqrt(tf.nn.moments(pred, axes=0)[1])
             return tf.math.divide_no_nan(denominator, nominator)
         else:
             return tf.constant(-10., dtype=tf.float32)
+
     result = tf.map_fn(lambda x: _get_corr(x), elems=(tf.transpose(y_true), tf.transpose(y_pred)), dtype=tf.float32)
     result_mask = tf.greater(result, -10.)
     result = tf.squeeze(tf.boolean_mask(tensor=result, mask=result_mask))
     return tf.reduce_mean(result)
+
 
 def p_corr_helper(y_true, y_pred):
     y_true = tf.constant(y_true)
@@ -76,16 +81,18 @@ def spearman_correlation(y_true, y_pred):
         truth = tf.cast(truth, dtype=tf.float32)
         pred = tf.squeeze(tf.boolean_mask(tensor=y_pred, mask=mask))
         pred = tf.cast(pred, dtype=tf.float32)
-        if k>=2.:
+        if k >= 2.:
             pred_rank = tf.argsort(tf.argsort(pred))
             truth_rank = tf.argsort(tf.argsort(truth))
             return p_corr_helper(y_true=tf.cast(truth_rank, 'float32'), y_pred=tf.cast(pred_rank, 'float32'))
         else:
             return tf.constant(-10., dtype=tf.float32)
+
     result = tf.map_fn(lambda x: _get_corr(x), elems=(tf.transpose(y_true), tf.transpose(y_pred)), dtype=tf.float32)
     result_mask = tf.greater(result, -10.)
     result = tf.squeeze(tf.boolean_mask(tensor=result, mask=result_mask))
     return tf.reduce_mean(result)
+
 
 def mse(y_true, y_pred):
     def _get_mse(elems):
@@ -97,10 +104,11 @@ def mse(y_true, y_pred):
         truth = tf.cast(truth, dtype=tf.float32)
         pred = tf.squeeze(tf.boolean_mask(tensor=y_pred, mask=mask))
         pred = tf.cast(pred, dtype=tf.float32)
-        if k>=2.:
+        if k >= 2.:
             return mean_squared_error(y_true=truth, y_pred=pred)
         else:
             return tf.constant(-10., dtype=tf.float32)
+
     result = tf.map_fn(lambda x: _get_mse(x), elems=(tf.transpose(y_true), tf.transpose(y_pred)), dtype=tf.float32)
     result_mask = tf.greater(result, -10.)
     result = tf.squeeze(tf.boolean_mask(tensor=result, mask=result_mask))
@@ -117,10 +125,11 @@ def mae(y_true, y_pred):
         truth = tf.cast(truth, dtype=tf.float32)
         pred = tf.squeeze(tf.boolean_mask(tensor=y_pred, mask=mask))
         pred = tf.cast(pred, dtype=tf.float32)
-        if k>=2.:
+        if k >= 2.:
             return mean_absolute_error(y_true=truth, y_pred=pred)
         else:
             return tf.constant(-10., dtype=tf.float32)
+
     result = tf.map_fn(lambda x: _get_mae(x), elems=(tf.transpose(y_true), tf.transpose(y_pred)), dtype=tf.float32)
     result_mask = tf.greater(result, -10.)
     result = tf.squeeze(tf.boolean_mask(tensor=result, mask=result_mask))
@@ -136,9 +145,17 @@ def compute_cosine_distances_matrix(x, y):
 
 def contrastive_loss(y_true, y_pred):
     sim_matrix = compute_cosine_distances_matrix(y_true, y_pred)
-    return tf.math.log(tf.reduce_sum(tf.multiply(tf.exp(sim_matrix), -2 * (
-            tf.eye(num_rows=sim_matrix.shape[0], dtype=tf.float32) - 1)))) - tf.math.log(
-        tf.reduce_sum(tf.multiply(tf.exp(sim_matrix), tf.eye(num_rows=sim_matrix.shape[0], dtype=tf.float32))))
+    # return tf.math.log(tf.reduce_sum(tf.multiply(tf.exp(sim_matrix), -2 * (
+    #         tf.eye(num_rows=sim_matrix.shape[0], dtype=tf.float32) - 1)))) - tf.math.log(
+    #     tf.reduce_sum(tf.multiply(tf.exp(sim_matrix), tf.eye(num_rows=sim_matrix.shape[0], dtype=tf.float32))))
+    denominator = tf.reduce_sum(tf.multiply(tf.exp(sim_matrix), -1 * (
+            tf.eye(num_rows=sim_matrix.shape[0], dtype=tf.float32) - 1)), axis=0) + \
+                  tf.reduce_sum(tf.multiply(tf.exp(sim_matrix), -1 * (
+            tf.eye(num_rows=sim_matrix.shape[0], dtype=tf.float32) - 1)), axis=1)
+    nominator = tf.reduce_sum(tf.multiply(tf.exp(sim_matrix), tf.eye(num_rows=sim_matrix.shape[0], dtype=tf.float32)),
+                              axis=0)
+
+    return -tf.reduce_mean(tf.math.log(nominator) - tf.math.log(denominator))
 
 
 def compute_pairwise_distances(x, y):

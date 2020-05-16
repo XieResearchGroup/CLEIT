@@ -15,7 +15,7 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
                      loss_fn=keras.losses.MeanSquaredError(),
                      min_epoch=model_config.min_epoch,
                      max_epoch=model_config.max_epoch,
-                     tolerance=10,
+                     tolerance=50,
                      diff_threshold=1e-2,
                      gradient_threshold=model_config.gradient_threshold):
     output_folder = os.path.join('saved_weights', 'gex', repr(auto_encoder.encoder) + '_encoder_weights')
@@ -348,7 +348,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
                      loss_fn=keras.losses.MeanSquaredError(),
                      min_epoch=model_config.min_epoch,
                      max_epoch=model_config.max_epoch,
-                     tolerance=10,
+                     tolerance=50,
                      diff_threshold=1e-2,
                      gradient_threshold=model_config.gradient_threshold,
                      exp_type='cv'):
