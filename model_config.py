@@ -19,8 +19,8 @@ transmitter_output_dim = encoder_latent_dimension
 #learning configurations
 kernel_regularizer_l = 0.001
 pre_training_lr = 5e-4 #fixed, may need to loose regularization for pre-training
-fine_tuning_lr = 5e-4
-decay = 0.8
+fine_tuning_lr = 5e-4 #too small learning rates may leads to over-fitting like behavior
+decay = 0.5
 max_epoch = 300
 min_epoch = 100
 gradual_unfreezing_flag = True
