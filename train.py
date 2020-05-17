@@ -204,7 +204,7 @@ def fine_tune_gex_encoder(encoder,
                 if (epoch - min_epoch) % unfrozen_epoch == 0:
                     free_layers -= 1
                     lr *= model_config.decay
-                for i in range(num_encoder_layers, free_layers - 1, -1):
+                for i in range(num_encoder_layers-1, free_layers - 1, -1):
                     to_train_variables.extend(encoder.layers[i].trainable_variables)
                 if free_layers <= 0:
                     gradual_unfreezing_flag = False
@@ -696,7 +696,7 @@ def fine_tune_mut_encoder(encoder, train_dataset,
     num_encoder_layers = len(encoder.layers)
     if repr(encoder).startswith('stochastic'):
         num_encoder_layers -= 1
-    free_layers = num_encoder_layers
+    free_encoder_layers = num_encoder_layers
 
     if gradual_unfreezing_flag:
         encoder.trainable = False
@@ -746,7 +746,7 @@ def fine_tune_mut_encoder(encoder, train_dataset,
                     if (epoch - min_epoch) % unfrozen_epoch == 0:
                         free_encoder_layers -= 1
                         lr *= model_config.decay
-                    for i in range(len(encoder.layers) - 1, free_encoder_layers - 1, -1):
+                    for i in range(num_encoder_layers-1, free_encoder_layers - 1, -1):
                         to_train_variables.extend(encoder.layers[i].trainable_variables)
                     if free_encoder_layers <= 0:
                         gradual_unfreezing_flag = False

@@ -80,7 +80,7 @@ if __name__ == '__main__':
     gex_encoder, gex_pre_train_history_df = train.pre_train_gex_AE(auto_encoder=gex_auto_encoder,
                                                                    train_dataset=train_dataset,
                                                                    val_dataset=val_dataset,
-                                                                   batch_size=64)
+                                                                   batch_size=128)
 
     utils.safe_make_dir('history')
     with open(os.path.join('history', history_name), 'ab') as handle:
@@ -130,7 +130,7 @@ if __name__ == '__main__':
                                                                 reference_encoder=gex_encoder,
                                                                 train_dataset=train_dataset,
                                                                 val_dataset=val_dataset,
-                                                                batch_size=64)
+                                                                batch_size=128)
     #
     with open(os.path.join('history', history_name), 'ab') as handle:
         pickle.dump(mut_pre_train_history_df, handle)
