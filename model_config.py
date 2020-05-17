@@ -17,7 +17,7 @@ transmitter_act_fn = keras.activations.relu
 transmitter_output_act_fn = None
 transmitter_output_dim = encoder_latent_dimension
 #learning configurations
-kernel_regularizer_l = 0.0001
+kernel_regularizer_l = 0.0005
 pre_training_lr = 1e-4 #fixed, may need to loose regularization for pre-training
 fine_tuning_lr = 5e-4 #too small learning rates may leads to over-fitting like behavior
 decay = 0.9
