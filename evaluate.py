@@ -51,13 +51,15 @@ def cell_wise_top_k_evaluation(truth_df, pred_df):
     for k in k_vecs:
         for cell in truth_df.index:
             drugs = truth_df.columns[~truth_df.loc[cell].isna()]
-            if len(drugs) < k:
+            if len(drugs) <= k:
                 per_cell_measurement[k][cell] = None
-
             else:
-                topk_truth = truth_df.loc[cell, drugs].nlargest(k).index
-                topk_pred = pred_df.loc[cell,].nlargest(k).index
-                per_cell_measurement[k][cell] = len(topk_truth.intersection(topk_pred)) / k
+                topk_value = truth_df.loc[cell, drugs].nlargest(k)[-1]
+                num_drugs = (truth_df.loc[cell, drugs] >= topk_value).sum()
+                topk_truth = truth_df.loc[cell,drugs][truth_df.loc[cell,drugs]>=topk_value].index
+                pred_topk_value = pred_df.loc[cell,].nlargest(k)[-1]
+                topk_pred = pred_df.loc[cell,][pred_df.loc[cell,]>=pred_topk_value].index
+                per_cell_measurement[k][cell] = len(topk_truth.intersection(topk_pred)) / num_drugs
 
     return pd.DataFrame.from_dict(per_cell_measurement)
 

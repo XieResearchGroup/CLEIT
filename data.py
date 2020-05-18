@@ -133,8 +133,8 @@ class DataProvider:
         if self.scale_fn:
             # self.gex_scaler = min_max_scale(xena_gex_dat)
             # self.mut_scaler = min_max_scale(xena_mut_dat)
-            self.gex_scaler = self.scale_fn(pd.concat(xena_gex_dat, gex_dat))
-            self.mut_scaler = self.scale_fn(pd.concat(xena_gex_dat, mut_dat))
+            self.gex_scaler = self.scale_fn(pd.concat([xena_gex_dat, gex_dat]))
+            self.mut_scaler = self.scale_fn(pd.concat([xena_gex_dat, mut_dat]))
 
             labeled_gex_dat = pd.DataFrame(self.gex_scaler.transform(labeled_gex_dat),
                                            index=labeled_gex_dat.index, columns=labeled_gex_dat.columns)
