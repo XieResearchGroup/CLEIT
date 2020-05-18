@@ -64,7 +64,7 @@ def align_feature(df1, df2):
 
 
 class DataProvider:
-    def __init__(self, feature_filter=None, feature_number=5000, propagation=True, target='AUC', scale_fn=None,
+    def __init__(self, feature_filter=None, feature_number=5000, propagation=True, target='AUC', scale_fn=min_max_scale,
                  omics=None,
                  random_seed=2019):
         self.omics = omics
@@ -109,16 +109,16 @@ class DataProvider:
 
         target_dat = preprocess_ccle_gdsc_utils.preprocess_target_data()
 
-        # target_samples = list(
-        #      set(gex_dat.index.to_list()) & set(mut_dat.index.to_list()) & set(target_dat.index.to_list()))
-        # mut_only_target_samples = list(
-        #      set(mut_dat.index.to_list()) & set(target_dat.index.to_list()) - set(gex_dat.index.to_list()))
+        target_samples = list(
+             set(gex_dat.index.to_list()) & set(mut_dat.index.to_list()) & set(target_dat.index.to_list()))
+        mut_only_target_samples = list(
+             set(mut_dat.index.to_list()) & set(target_dat.index.to_list()) - set(gex_dat.index.to_list()))
 
         #
-        target_samples = list(
-            set(gex_dat.index.tolist()) & set(mut_dat.index.tolist()) & set(target_dat.index.tolist()))
-        mut_only_target_samples = list(
-            set(mut_dat.index.tolist()) & set(target_dat.index.tolist()) - set(gex_dat.index.tolist()))
+        # target_samples = list(
+        #     set(gex_dat.index.tolist()) & set(mut_dat.index.tolist()) & set(target_dat.index.tolist()))
+        # mut_only_target_samples = list(
+        #     set(mut_dat.index.tolist()) & set(target_dat.index.tolist()) - set(gex_dat.index.tolist()))
 
         labeled_gex_dat = gex_dat.loc[target_samples, :]
         labeled_mut_dat = mut_dat.loc[target_samples, :]
@@ -131,8 +131,10 @@ class DataProvider:
             [xena_mut_dat, mut_dat.loc[~mut_dat.index.isin(target_samples+mut_only_target_samples), :]])
 
         if self.scale_fn:
-            self.gex_scaler = min_max_scale(xena_gex_dat)
-            self.mut_scaler = min_max_scale(xena_mut_dat)
+            # self.gex_scaler = min_max_scale(xena_gex_dat)
+            # self.mut_scaler = min_max_scale(xena_mut_dat)
+            self.gex_scaler = self.scale_fn(pd.concat(xena_gex_dat, gex_dat))
+            self.mut_scaler = self.scale_fn(pd.concat(xena_gex_dat, mut_dat))
 
             labeled_gex_dat = pd.DataFrame(self.gex_scaler.transform(labeled_gex_dat),
                                            index=labeled_gex_dat.index, columns=labeled_gex_dat.columns)
