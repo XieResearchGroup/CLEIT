@@ -16,11 +16,11 @@ class EncoderBlock(keras.Model):
         for dim in architecture:
             self.intermediate_layers.append(
                 DenseLayer(units=dim, activation=act_fn, kernel_regularizer_l=kernel_regularizer_l))
-        self.output_layer = keras.layers.Dense(latent_dim, kernel_initializer='he_norm',
+        self.output_layer = keras.layers.Dense(latent_dim, kernel_initializer='he_normal',
                                                bias_initializer=keras.initializers.Constant(value=0.1),
                                                activation=output_act_fn)
         if self.stochastic_flag:
-            self.extra_output_layer = keras.layers.Dense(latent_dim, kernel_initializer='he_norm',
+            self.extra_output_layer = keras.layers.Dense(latent_dim, kernel_initializer='he_normal',
                                                          bias_initializer=keras.initializers.Constant(value=0.1),
                                                          activation=keras.activations.relu)
 
@@ -54,7 +54,7 @@ class MLPBlock(keras.Model):
         for dim in architecture:
             self.intermediate_layers.append(
                 DenseLayer(units=dim, activation=act_fn, kernel_regularizer_l=kernel_regularizer_l))
-        self.output_layer = keras.layers.Dense(output_dim, kernel_initializer='he_norm',
+        self.output_layer = keras.layers.Dense(output_dim, kernel_initializer='he_normal',
                                                bias_initializer=keras.initializers.Constant(value=0.1),
                                                activation=output_act_fn)
 
@@ -114,7 +114,7 @@ class Critic(keras.Model):
         for dim in architecture:
             self.intermediate_layers.append(
                 LayerNormLayer(units=dim, activation=act_fn, kernel_regularizer_l=kernel_regularizer_l))
-        self.output_layer = keras.layers.Dense(output_dim, kernel_initializer='he_norm',
+        self.output_layer = keras.layers.Dense(output_dim, kernel_initializer='he_normal',
                                                bias_initializer=keras.initializers.Constant(value=0.1),
                                                activation=output_act_fn)
 
