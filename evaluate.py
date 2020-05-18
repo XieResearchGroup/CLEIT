@@ -104,6 +104,15 @@ def bootstrap_baseline_random_results_cell_wise(truth_df, B=1000):
     random_guess_base_df = truth_df.transpose().assign(**truth_df.mean(axis=1).to_dict()).transpose()
     return measurement_df.mean(axis=1), cell_wise_evaluation(truth_df=truth_df, pred_df=random_guess_base_df).mean()
 
+def topk_precision_bar_plot(plot_df, output_file_path='topk_precision_placehold.png'):
+    g = sns.catplot(data=plot_df, col='k', col_wrap=2, x='method', y='precision',kind='bar')
+    g.savefig(output_file_path)
+
+
+
+
+
+
 
 
 
