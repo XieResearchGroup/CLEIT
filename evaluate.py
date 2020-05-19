@@ -85,7 +85,7 @@ def bootstrap_baseline_random_results_drug_wise(truth_df, B=1000):
 
 
 
-def bootstrap_baseline_random_results_cell_wise(truth_df, B=1000):
+def bootstrap_baseline_random_results_cell_wise(truth_df, B=100):
     measurement_df = None
     for _ in range(B):
         pred_df = pd.DataFrame(np.random.uniform(size=truth_df.shape),
