@@ -17,7 +17,7 @@ class DenseLayer(keras.layers.Layer):
                                               kernel_initializer=self.kernel_initializer,
                                               bias_initializer=keras.initializers.Constant(value=0.1),
                                               kernel_regularizer=self.kernel_regularizer)
-        self.bn_layer = keras.layers.BatchNormalization()
+        self.bn_layer = keras.layers.BatchNormalization(renorm=True)
         self.act_layer = keras.layers.Activation(activation=activation)
 
     def call(self, inputs, training=True):
