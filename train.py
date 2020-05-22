@@ -35,6 +35,7 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
     train_mse_list = []
     train_mae_list = []
     best_loss = float('inf')
+    best_epoch = 0
     tolerance_count = 0
     #
     # @tf.function
@@ -96,6 +97,7 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
                 else:
                     tolerance_count += 1
                 best_loss = val_mse
+                best_epoch = epoch
             else:
                 tolerance_count += 1
 
@@ -111,17 +113,17 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
     if val_dataset is None:
         auto_encoder.encoder.save_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'),
                                           save_format='tf')
-        return auto_encoder.encoder, pd.DataFrame({
+        return best_epoch, auto_encoder.encoder, pd.DataFrame({
             'train_mse': train_mse_list,
-            'train_maep': train_mae_list
+            'train_mae': train_mae_list
         })
     else:
         auto_encoder.encoder.load_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'))
-        return auto_encoder.encoder, pd.DataFrame({
+        return best_epoch, auto_encoder.encoder, pd.DataFrame({
             'train_mse': train_mse_list,
-            'train_maep': train_mae_list,
+            'train_mae': train_mae_list,
             'val_mse': val_mse_list,
-            'val_maep': val_mae_list
+            'val_mae': val_mae_list
         })
 
 
@@ -147,6 +149,7 @@ def fine_tune_gex_encoder(encoder,
     safe_make_dir(output_folder)
 
     best_overall_metric = float('-inf')
+    best_epoch = 0
 
     train_dataset = train_dataset.shuffle(buffer_size=512).batch(batch_size)
 
@@ -246,38 +249,10 @@ def fine_tune_gex_encoder(encoder,
                 optimizer.apply_gradients(zip(grads, to_train_variables))
                 counts += 1.
 
-            # for drug in target_df.columns:
-            #     # model = keras.Sequential()
-            #     # model.add(encoder)
-            #     # model.add(gex_supervisor_dict[drug])
-            #
-            #     y = target_df.loc[~target_df[drug].isna(), drug]
-            #     y = y.astype('float32')
-            #     X = raw_X.loc[y.index]
-            #     X = X.astype('float32')
-            #
-            #     if validation_X is None:
-            #         kfold = KFold(n_splits=5, shuffle=True, random_state=2020)
-            #         cv_splits = list(kfold.split(X))
-            #         train_index, test_index = cv_splits[0]
-            #
-            #         train_X, train_Y = X.iloc[train_index], y.iloc[train_index]
-            #         # assert all(train_X.index == train_Y.index)
-            #         val_X, val_Y = X.iloc[test_index], y.iloc[test_index]
-            #         # assert all(val_X.index == val_Y.index)
-            #         train_X, train_Y = train_X.values, train_Y.values
-            #         val_X, val_Y = val_X.values, val_Y.values
-            #
-            #     else:
-            #         pass
 
         print('Training loss  at epoch %s: %s' % (epoch + 1, float(train_epoch_loss / counts)))
         regressor_tuning_flag = False
 
-        # total_train_pearson += train_pearson / float(target_df.shape[-1])
-        # total_train_spearman += train_spearman / float(target_df.shape[-1])
-        # total_train_mse += train_mse / float(target_df.shape[-1])
-        # total_train_mae += train_mae / float(target_df.shape[-1])
         training_history['loss'].append(train_epoch_loss / counts)
         training_history['pearson'].append(train_epoch_pearson / counts)
         training_history['spearman'].append(train_epoch_spearman / counts)
@@ -324,6 +299,7 @@ def fine_tune_gex_encoder(encoder,
 
             if validation_history[validation_monitoring_metric][-1] > best_overall_metric:
                 best_overall_metric = validation_history[validation_monitoring_metric][-1]
+                best_epoch = epoch
                 encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
                 regressor.save_weights(os.path.join(output_folder, 'regressor_weights'), save_format='tf')
                 # print(len(to_train_variables))
@@ -336,7 +312,7 @@ def fine_tune_gex_encoder(encoder,
         encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
         regressor.save_weights(os.path.join(output_folder, 'regressor_weights'), save_format='tf')
 
-    return training_history, validation_history
+    return best_epoch, training_history, validation_history
 
 
 def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset,
@@ -361,7 +337,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
         val_dataset = val_dataset.batch(batch_size)
         val_loss_history = []
         best_val_loss = float('inf')
-
+    best_epoch = 0
     train_loss_history = []
 
     tolerance_count = 0
@@ -449,6 +425,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
                 else:
                     tolerance_count += 1
                 best_val_loss = val_loss_history[-1]
+                best_epoch = epoch
             else:
                 tolerance_count += 1
 
@@ -468,12 +445,12 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
         if transmitter_flag:
             transmitter.save_weights(os.path.join(output_folder, 'pre_trained_transmitter_weights'),
                                      save_format='tf')
-        return auto_encoder.encoder, pd.DataFrame({
+        return best_epoch, auto_encoder.encoder, pd.DataFrame({
             'train_loss': train_loss_history
         })
 
     else:
-        auto_encoder.encoder.load_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'))
+        best_epoch, auto_encoder.encoder.load_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'))
         return auto_encoder.encoder, pd.DataFrame({
             'train_loss': train_loss_history,
             'val_loss': val_loss_history
@@ -506,7 +483,7 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
         val_loss_history = []
         val_gen_loss_history = []
         best_val_loss = float('inf')
-
+    best_epoch = 0
     if transmitter_flag:
         transmitter = module.MLPBlock(architecture=model_config.transmitter_architecture,
                                       act_fn=model_config.transmitter_act_fn,
@@ -628,6 +605,7 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
                 else:
                     tolerance_count += 1
                 best_val_loss = val_loss_history[-1]
+                best_epoch = epoch
             else:
                 tolerance_count += 1
 
@@ -647,13 +625,13 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
         if transmitter_flag:
             transmitter.save_weights(os.path.join(output_folder, 'pre_trained_transmitter_weights'),
                                      save_format='tf')
-        return auto_encoder.encoder, pd.DataFrame({
+        return best_epoch, auto_encoder.encoder, pd.DataFrame({
             'train_critic_loss': train_loss_history,
             'train_gen_loss': train_gen_loss_history
         })
     else:
         auto_encoder.encoder.load_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'))
-        return auto_encoder.encoder, pd.DataFrame({
+        return best_epoch, auto_encoder.encoder, pd.DataFrame({
             'train_critic_loss': train_loss_history,
             'val_critic_loss': val_loss_history,
             'train_gen_loss': train_gen_loss_history,
@@ -685,6 +663,7 @@ def fine_tune_mut_encoder(encoder, train_dataset,
     safe_make_dir(output_folder)
 
     best_overall_metric = float('-inf')
+    best_epoch = 0
     train_dataset = train_dataset.shuffle(buffer_size=512).batch(batch_size)
 
     if val_dataset is not None:
@@ -837,6 +816,7 @@ def fine_tune_mut_encoder(encoder, train_dataset,
 
             if validation_history[validation_monitoring_metric][-1] > best_overall_metric:
                 best_overall_metric = validation_history[validation_monitoring_metric][-1]
+                best_epoch = epoch
                 encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
                 regressor.save_weights(os.path.join(output_folder, 'regressor_weights'), save_format='tf')
                 if transmitter_flag:
@@ -853,7 +833,7 @@ def fine_tune_mut_encoder(encoder, train_dataset,
             transmitter.save_weights(os.path.join(output_folder, 'fine_tuned_transmitter_weights'),
                                      save_format='tf')
 
-    return training_history, validation_history
+    return best_epoch, training_history, validation_history
 
 # def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,
 #                           target_df,

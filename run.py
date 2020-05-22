@@ -77,7 +77,7 @@ if __name__ == '__main__':
                            kernel_regularizer_l=model_config.kernel_regularizer_l)
 
     #gex_encoder = gex_auto_encoder.encoder
-    gex_encoder, gex_pre_train_history_df = train.pre_train_gex_AE(auto_encoder=gex_auto_encoder,
+    pre_g_epoch, gex_encoder, gex_pre_train_history_df = train.pre_train_gex_AE(auto_encoder=gex_auto_encoder,
                                                                    train_dataset=train_dataset,
                                                                    val_dataset=val_dataset,
                                                                    batch_size=64)
@@ -94,7 +94,7 @@ if __name__ == '__main__':
         (data_provider.labeled_data['gex'].iloc[data_provider.get_k_folds()[i][1]].values,
          data_provider.labeled_data['target'].iloc[data_provider.get_k_folds()[i][1]].values))
 
-    gex_fine_tune_train_history, gex_fine_tune_validation_history = train.fine_tune_gex_encoder(
+    fine_g_epoch, gex_fine_tune_train_history, gex_fine_tune_validation_history = train.fine_tune_gex_encoder(
         encoder=gex_encoder,
         train_dataset=train_dataset,
         val_dataset=val_dataset)
@@ -126,7 +126,7 @@ if __name__ == '__main__':
 
     #mut_encoder = mut_auto_encoder.encoder
     #mut_encoder.load_weights('saved_weights/mut/cv/stochastic_512_256_128_128_encoder_weights/pre_trained_encoder_weights')
-    mut_encoder, mut_pre_train_history_df = pre_train_mut_AE_fn(auto_encoder=mut_auto_encoder,
+    pre_m_epoch, mut_encoder, mut_pre_train_history_df = pre_train_mut_AE_fn(auto_encoder=mut_auto_encoder,
                                                                 reference_encoder=gex_encoder,
                                                                 train_dataset=train_dataset,
                                                                 val_dataset=val_dataset,
@@ -142,7 +142,7 @@ if __name__ == '__main__':
         (data_provider.labeled_data['mut'].iloc[data_provider.get_k_folds()[i][1]].values,
          data_provider.labeled_data['target'].iloc[data_provider.get_k_folds()[i][1]].values))
 
-    mut_fine_tune_train_history, mut_fine_tune_validation_history = train.fine_tune_mut_encoder(
+    fine_m_epoch, mut_fine_tune_train_history, mut_fine_tune_validation_history = train.fine_tune_mut_encoder(
         encoder=mut_encoder,
         train_dataset=train_dataset,
         val_dataset=val_dataset,

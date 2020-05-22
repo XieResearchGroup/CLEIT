@@ -56,6 +56,9 @@ class DenseLayerWithMask(keras.layers.Layer):
             self.kernel_regularizer = None
         if self.bn_flag:
             self.bn_layer = keras.layers.BatchNormalization()
+        self.mask = tf.constant(block_diag(
+                *[np.ones(shape=[int(input_shape[-1] // self.num_of_splits), self.units_per_split]) for _ in
+                  range(self.num_of_splits)]), dtype=tf.float32, name='mask')
         self.act_layer = keras.layers.Activation(activation=activation)
 
     def build(self, input_shape):
@@ -67,12 +70,8 @@ class DenseLayerWithMask(keras.layers.Layer):
                                     initializer=keras.initializers.Constant(value=0.1),
                                     regularizer=self.kernel_regularizer,
                                     trainable=True)
-        self.mask = tf.constant(block_diag(
-            *[np.ones(shape=[int(input_shape[-1] // self.num_of_splits), self.units_per_split]) for _ in
-              range(self.num_of_splits)]), dtype=tf.float32, name='mask')
 
     def call(self, inputs, training=True, **kwargs):
-
         if self.kernel_regularizer_l is not None:
             self.add_loss(self.kernel_regularizer_l*tf.norm(self.weight * self.mask, ord=2))
         output = tf.matmul(inputs, self.weight * self.mask) + self.bias
@@ -170,6 +169,7 @@ class LayerNormLayer(keras.layers.Layer):
 
 
 class SamplingLayer(keras.layers.Layer):
+
     def call(self, inputs, **kwargs):
         z_mean, z_log_var = inputs
         batch = tf.shape(z_mean)[0]

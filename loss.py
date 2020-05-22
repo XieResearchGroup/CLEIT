@@ -14,7 +14,6 @@ from tensorflow.keras.losses import mean_squared_error, mean_absolute_error
 #         penalty = tf.square(tf.reduce_sum(tf.abs(y_pred - y_true))) / tf.square(k)
 #         loss -= penalty
 #     return loss
-
 def penalized_mean_squared_error(y_true, y_pred, penalty=True):
     # y_pred = tf.squeeze(y_pred)
     def _get_masked_mse(elems):
@@ -41,7 +40,6 @@ def penalized_mean_squared_error(y_true, y_pred, penalty=True):
     result = tf.squeeze(tf.boolean_mask(tensor=result, mask=result_mask))
     return tf.reduce_mean(result)
 
-
 def pearson_correlation(y_true, y_pred):
     def _get_corr(elems):
         y_true, y_pred = elems
@@ -64,13 +62,11 @@ def pearson_correlation(y_true, y_pred):
     result = tf.squeeze(tf.boolean_mask(tensor=result, mask=result_mask))
     return tf.reduce_mean(result)
 
-
 def p_corr_helper(y_true, y_pred):
     y_true = tf.constant(y_true)
     denominator = tf.reduce_mean(tf.multiply(y_pred - tf.reduce_mean(y_pred), y_true - tf.reduce_mean(y_true)))
     nominator = tf.sqrt(tf.nn.moments(y_pred, axes=0)[1]) * tf.sqrt(tf.nn.moments(y_true, axes=0)[1])
     return tf.math.divide_no_nan(denominator, nominator)
-
 
 def spearman_correlation(y_true, y_pred):
     def _get_corr(elems):
@@ -93,7 +89,6 @@ def spearman_correlation(y_true, y_pred):
     result = tf.squeeze(tf.boolean_mask(tensor=result, mask=result_mask))
     return tf.reduce_mean(result)
 
-
 def mse(y_true, y_pred):
     def _get_mse(elems):
         y_true, y_pred = elems
@@ -113,7 +108,6 @@ def mse(y_true, y_pred):
     result_mask = tf.greater(result, -10.)
     result = tf.squeeze(tf.boolean_mask(tensor=result, mask=result_mask))
     return tf.reduce_mean(result)
-
 
 def mae(y_true, y_pred):
     def _get_mae(elems):
@@ -135,13 +129,11 @@ def mae(y_true, y_pred):
     result = tf.squeeze(tf.boolean_mask(tensor=result, mask=result_mask))
     return tf.reduce_mean(result)
 
-
 def compute_cosine_distances_matrix(x, y):
     normalize_x = tf.nn.l2_normalize(x, 1)
     normalize_y = tf.nn.l2_normalize(y, 1)
     sim_matrix = tf.matmul(normalize_x, normalize_y, transpose_b=True)
     return sim_matrix
-
 
 def contrastive_loss(y_true, y_pred):
     sim_matrix = compute_cosine_distances_matrix(y_true, y_pred)
@@ -157,7 +149,6 @@ def contrastive_loss(y_true, y_pred):
 
     return -tf.reduce_mean(tf.math.log(nominator) - tf.math.log(denominator))
 
-
 def compute_pairwise_distances(x, y):
     if not len(x.get_shape()) == len(y.get_shape()) == 2:
         raise ValueError('Both inputs should be matrices.')
@@ -168,13 +159,11 @@ def compute_pairwise_distances(x, y):
     norm = lambda x: tf.reduce_sum(tf.square(x), 1)
     return tf.transpose(norm(tf.expand_dims(x, 2) - tf.transpose(y)))
 
-
 def gaussian_kernel_matrix(x, y, sigmas):
     beta = 1. / (2. * (tf.expand_dims(sigmas, 1)))
     dist = compute_pairwise_distances(x, y)
     s = tf.matmul(beta, tf.reshape(dist, (1, -1)))
     return tf.reshape(tf.reduce_sum(tf.exp(-s), 0), tf.shape(dist))
-
 
 def maximum_mean_discrepancy(x, y, kernel=gaussian_kernel_matrix):
     cost = tf.reduce_mean(kernel(x, x))
@@ -182,7 +171,6 @@ def maximum_mean_discrepancy(x, y, kernel=gaussian_kernel_matrix):
     cost -= 2 * tf.reduce_mean(kernel(x, y))
     cost = tf.where(cost > 0, cost, 0)
     return cost
-
 
 def mmd_loss(y_true, y_pred):
     sigmas = [
