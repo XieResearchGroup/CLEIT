@@ -137,7 +137,7 @@ class AE(keras.Model):
                  noise_fn=None, name='ae', **kwargs):
         super(AE, self).__init__(name=name, **kwargs)
         if noise_fn is not None:
-            self.noise_layer = noise_fn(0.005)
+            self.noise_layer = noise_fn(0.001)
         self.encoder = EncoderBlock(latent_dim=latent_dim, architecture=architecture, act_fn=act_fn,
                                     output_act_fn=None,
                                     kernel_regularizer_l=kernel_regularizer_l)
