@@ -71,7 +71,7 @@ if __name__ == '__main__':
     gex_auto_encoder = VAE(latent_dim=model_config.encoder_latent_dimension,
                            output_dim=data_provider.shape_dict['gex'],
                            architecture=model_config.encoder_architecture,
-                           noise_fn=None,
+                           noise_fn=keras.layers.GaussianNoise,
                            output_act_fn=keras.activations.relu,
                            act_fn=model_config.encoder_act_fn,
                            kernel_regularizer_l=model_config.kernel_regularizer_l)
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     mut_auto_encoder = VAE(latent_dim=model_config.encoder_latent_dimension,
                            output_dim=data_provider.shape_dict['mut'],
                            architecture=model_config.encoder_architecture,
-                           noise_fn=None,
+                           noise_fn=keras.layers.GaussianNoise,
                            output_act_fn=keras.activations.relu,
                            act_fn=model_config.encoder_act_fn,
                            kernel_regularizer_l=model_config.kernel_regularizer_l)
