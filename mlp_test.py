@@ -17,7 +17,6 @@ import numpy as np
 from tensorflow import keras
 from functools import partial
 
-
 # gex encoder pre-training can be shared
 # gex fine-tuning needs to be retrained for different training folds, one time for the mutation-only
 # mutation pre-training needs to be retrained for different training folds * different transmission function, one time for each transmission function for the mutation only

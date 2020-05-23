@@ -6,7 +6,7 @@ from tensorflow import keras
 from utils import *
 
 
-def predict(inputs, pre_train_flag, transmitter_flag, dat_type, exp_type):
+def predict(inputs, pre_train_flag, clr_fn, transmitter_flag, dat_type, exp_type):
     encoder = module.EncoderBlock(latent_dim=model_config.encoder_latent_dimension,
                                   architecture=model_config.encoder_architecture,
                                   output_act_fn=model_config.encoder_output_act_fn,
@@ -26,10 +26,16 @@ def predict(inputs, pre_train_flag, transmitter_flag, dat_type, exp_type):
             )
 
     else:
-        encoder.load_weights(
-            os.path.join('saved_weights', dat_type, exp_type, repr(encoder) + '_encoder_weights',
-                         'fine_tuned_encoder_weights')
-        )
+        if dat_type == 'gex':
+            encoder.load_weights(
+                os.path.join('saved_weights', dat_type, exp_type, repr(encoder) + '_encoder_weights',
+                             'fine_tuned_encoder_weights')
+            )
+        else:
+            encoder.load_weights(
+                os.path.join('saved_weights', dat_type, exp_type, repr(encoder) + '_encoder_weights',
+                             clr_fn, str(transmitter_flag), 'fine_tuned_encoder_weights')
+            )
 
     if transmitter_flag:
         transmitter = module.MLPBlock(architecture=model_config.transmitter_architecture,
@@ -39,12 +45,12 @@ def predict(inputs, pre_train_flag, transmitter_flag, dat_type, exp_type):
         if pre_train_flag:
             transmitter.load_weights(
                 os.path.join('saved_weights', dat_type, exp_type, repr(encoder) + '_encoder_weights',
-                             'pre_trained_transmitter_weights')
+                             clr_fn, str(transmitter_flag), 'pre_trained_transmitter_weights')
             )
         else:
             transmitter.load_weights(
                 os.path.join('saved_weights', dat_type, exp_type, repr(encoder) + '_encoder_weights',
-                             'fine_tuned_transmitter_weights')
+                             clr_fn, str(transmitter_flag), 'fine_tuned_transmitter_weights')
             )
 
     regressor = module.MLPBlockWithMask(architecture=model_config.regressor_architecture,
@@ -53,8 +59,13 @@ def predict(inputs, pre_train_flag, transmitter_flag, dat_type, exp_type):
                                         output_act_fn=model_config.regressor_output_act_fn,
                                         output_dim=model_config.regressor_output_dim)
 
-    regressor.load_weights(
-        os.path.join('saved_weights', dat_type, exp_type, repr(encoder) + '_encoder_weights', 'regressor_weights'))
+    if dat_type == 'gex':
+        regressor.load_weights(
+            os.path.join('saved_weights', dat_type, exp_type, repr(encoder) + '_encoder_weights', 'regressor_weights'))
+    else:
+        regressor.load_weights(
+            os.path.join('saved_weights', dat_type, exp_type, repr(encoder) + '_encoder_weights',
+                         clr_fn, str(transmitter_flag), 'regressor_weights'))
 
     if repr(encoder).startswith('stochastic'):
         encoded_X = encoder(inputs, training=False)[0]

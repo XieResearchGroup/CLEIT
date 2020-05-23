@@ -28,4 +28,4 @@ unfrozen_epoch = 20
 batch_size = 32
 alpha = 0.9
 gradient_threshold = 1e-3
-
+noise_fn = keras.layers.GaussianNoise(0.001),

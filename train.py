@@ -1,14 +1,13 @@
 import tensorflow as tf
 import module
 import model_config
+import os
 from collections import defaultdict
 from sklearn.model_selection import KFold
 from tensorflow import keras
 from loss import *
 from utils import *
 
-
-# @tf.function
 def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
                      batch_size=model_config.batch_size,
                      optimizer=keras.optimizers.Adam(learning_rate=model_config.pre_training_lr),
@@ -18,6 +17,23 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
                      tolerance=20,
                      diff_threshold=1e-2,
                      gradient_threshold=model_config.gradient_threshold):
+    """
+    :param auto_encoder:
+    :param train_dataset:
+    :param val_dataset:
+    :param batch_size:
+    :param optimizer:
+    :param loss_fn:
+    :param min_epoch:
+    :param max_epoch:
+    :param tolerance:
+    :param diff_threshold:
+    :param gradient_threshold:
+    :return: best_epoch:
+             encoder:
+             history_df:
+    """
+
     output_folder = os.path.join('saved_weights', 'gex', repr(auto_encoder.encoder) + '_encoder_weights')
     safe_make_dir(output_folder)
 
@@ -37,17 +53,6 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
     best_loss = float('inf')
     best_epoch = 0
     tolerance_count = 0
-    #
-    # @tf.function
-    # def train_step(x_batch_train, y_batch_train):
-    #     nonlocal grad_norm
-    #     with tf.GradientTape() as tape:
-    #         preds = auto_encoder(x_batch_train, training=True)
-    #         loss_value = loss_fn(y_batch_train, preds)
-    #         loss_value += sum(auto_encoder.losses)
-    #     grads = tape.gradient(loss_value, auto_encoder.trainable_variables)
-    #     optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables))
-    #     grad_norm += tf.linalg.global_norm(grads)
 
     for epoch in range(max_epoch):
         print('epoch: ', epoch)
@@ -61,7 +66,7 @@ def pre_train_gex_AE(auto_encoder, train_dataset, val_dataset,
                 grads = tape.gradient(loss_value, auto_encoder.trainable_variables)
                 grad_norm += tf.linalg.global_norm(grads)
             optimizer.apply_gradients(zip(grads, auto_encoder.trainable_variables))
-            #train_step(x_batch_train=x_batch_train, y_batch_train=y_batch_train)
+            # train_step(x_batch_train=x_batch_train, y_batch_train=y_batch_train)
             counts += 1
             train_mse_metric(y_batch_train, preds)
             train_mae_metric(y_batch_train, preds)
@@ -145,6 +150,28 @@ def fine_tune_gex_encoder(encoder,
                           gradient_threshold=model_config.gradient_threshold,
                           exp_type='cv'
                           ):
+    """
+    :param encoder:
+    :param train_dataset:
+    :param val_dataset:
+    :param batch_size:
+    :param regressor_mlp_architecture:
+    :param regressor_shared_layer_num:
+    :param regressor_act_fn:
+    :param regressor_output_dim:
+    :param regressor_output_act_fn:
+    :param loss_fn:
+    :param validation_monitoring_metric:
+    :param max_epoch:
+    :param min_epoch:
+    :param gradual_unfreezing_flag:
+    :param unfrozen_epoch:
+    :param gradient_threshold:
+    :param exp_type:
+    :return: best_epoch:
+             training_history:
+             val_history:
+    """
     output_folder = os.path.join('saved_weights', 'gex', exp_type, repr(encoder) + '_encoder_weights')
     safe_make_dir(output_folder)
 
@@ -163,7 +190,6 @@ def fine_tune_gex_encoder(encoder,
     if repr(encoder).startswith('stochastic'):
         num_encoder_layers -= 1
     free_layers = num_encoder_layers
-
     encoder.trainable = False
     # shared_regressor_module = module.MLPBlock(architecture=model_config.shared_regressor_architecture,
     #                                           output_act_fn=model_config.shared_regressor_act_fn,
@@ -189,130 +215,113 @@ def fine_tune_gex_encoder(encoder,
     lr = model_config.fine_tuning_lr
     regressor_tuning_flag = False
 
-    for epoch in range(max_epoch):
-        grad_norm = 0.
+    if os.path.exists(os.path.join(output_folder, 'fine_tuned_encoder_weights.index')):
+        print('Model trained already!')
+        return best_epoch, training_history, validation_history
+    else:
+        for epoch in range(max_epoch):
+            grad_norm = 0.
 
-        # total_train_pearson = 0.
-        # total_train_spearman = 0.
-        # total_train_mse = 0.
-        # total_train_mae = 0.
-        #
-        # total_val_pearson = 0.
-        # total_val_spearman = 0.
-        # total_val_mse = 0.
-        # total_val_mae = 0.
-        to_train_variables = encoder.trainable_variables
-        if gradual_unfreezing_flag:
-            if epoch >= min_epoch:
-                if (epoch - min_epoch) % unfrozen_epoch == 0:
-                    free_layers -= 1
-                    lr *= model_config.decay
-                for i in range(num_encoder_layers-1, free_layers - 1, -1):
-                    to_train_variables.extend(encoder.layers[i].trainable_variables)
-                if free_layers <= 0:
-                    gradual_unfreezing_flag = False
-                    encoder.trainable = True
+            to_train_variables = encoder.trainable_variables
+            if gradual_unfreezing_flag:
+                if epoch >= min_epoch:
+                    if (epoch - min_epoch) % unfrozen_epoch == 0:
+                        free_layers -= 1
+                        lr *= model_config.decay
+                    for i in range(num_encoder_layers - 1, free_layers - 1, -1):
+                        to_train_variables.extend(encoder.layers[i].trainable_variables)
+                    if free_layers <= 0:
+                        gradual_unfreezing_flag = False
+                        encoder.trainable = True
 
-        # regressor = keras.Sequential()
-        # regressor.add(shared_regressor_module)
-        # regressor.add(drug_regressor_module)
-        train_epoch_loss = 0.
-        train_epoch_pearson = 0.
-        train_epoch_spearman = 0.
-        train_epoch_mse = 0.
-        train_epoch_mae = 0.
-        counts = 0.
-        optimizer = keras.optimizers.Adam(learning_rate=lr)
-        for step, (x_batch_train, y_batch_train) in enumerate(train_dataset):
-            with tf.GradientTape() as tape:
-                tape.watch(to_train_variables)
-                if repr(encoder).startswith('stochastic'):
-                    encoded_X = encoder(x_batch_train, training=True)[0]
-                else:
-                    encoded_X = encoder(x_batch_train, training=True)
-
-                preds = regressor(encoded_X, training=True)
-                loss_value = loss_fn(y_pred=preds, y_true=y_batch_train)
-                train_epoch_loss += loss_value
-                train_epoch_pearson += pearson_correlation(y_pred=preds, y_true=y_batch_train)
-                train_epoch_spearman += spearman_correlation(y_pred=preds, y_true=y_batch_train)
-                train_epoch_mse += mse(y_pred=preds, y_true=y_batch_train)
-                train_epoch_mae += mae(y_pred=preds, y_true=y_batch_train)
-
-                loss_value += sum(encoder.losses)
-                loss_value += sum(regressor.losses)
-                if not regressor_tuning_flag:
-                    to_train_variables.extend(regressor.trainable_variables)
-                    regressor_tuning_flag = True
-                grads = tape.gradient(loss_value, to_train_variables)
-                grad_norm += tf.linalg.global_norm(grads)
-                optimizer.apply_gradients(zip(grads, to_train_variables))
-                counts += 1.
-
-
-        print('Training loss  at epoch %s: %s' % (epoch + 1, float(train_epoch_loss / counts)))
-        regressor_tuning_flag = False
-
-        training_history['loss'].append(train_epoch_loss / counts)
-        training_history['pearson'].append(train_epoch_pearson / counts)
-        training_history['spearman'].append(train_epoch_spearman / counts)
-        training_history['mse'].append(train_epoch_mse / counts)
-        training_history['mae'].append(train_epoch_mae / counts)
-        train_counts = counts
-
-        if val_dataset is not None:
-            val_epoch_loss = 0.
-            val_epoch_pearson = 0.
-            val_epoch_spearman = 0.
-            val_epoch_mse = 0.
-            val_epoch_mae = 0.
+            train_epoch_loss = 0.
+            train_epoch_pearson = 0.
+            train_epoch_spearman = 0.
+            train_epoch_mse = 0.
+            train_epoch_mae = 0.
             counts = 0.
+            optimizer = keras.optimizers.Adam(learning_rate=lr)
+            for step, (x_batch_train, y_batch_train) in enumerate(train_dataset):
+                with tf.GradientTape() as tape:
+                    tape.watch(to_train_variables)
+                    if repr(encoder).startswith('stochastic'):
+                        encoded_X = encoder(x_batch_train, training=True)[0]
+                    else:
+                        encoded_X = encoder(x_batch_train, training=True)
 
-            for x_batch_val, y_batch_val in val_dataset:
-                if repr(encoder).startswith('stochastic'):
-                    encoded_val_X = encoder(x_batch_val, training=False)[0]
-                else:
-                    encoded_val_X = encoder(x_batch_val, training=False)
-                val_preds = regressor(encoded_val_X, training=False)
+                    preds = regressor(encoded_X, training=True)
+                    loss_value = loss_fn(y_pred=preds, y_true=y_batch_train)
+                    train_epoch_loss += loss_value
+                    train_epoch_pearson += pearson_correlation(y_pred=preds, y_true=y_batch_train)
+                    train_epoch_spearman += spearman_correlation(y_pred=preds, y_true=y_batch_train)
+                    train_epoch_mse += mse(y_pred=preds, y_true=y_batch_train)
+                    train_epoch_mae += mae(y_pred=preds, y_true=y_batch_train)
 
-                val_loss_value = loss_fn(y_pred=val_preds, y_true=y_batch_val)
-                val_epoch_loss += val_loss_value
+                    loss_value += sum(encoder.losses)
+                    loss_value += sum(regressor.losses)
+                    if not regressor_tuning_flag:
+                        to_train_variables.extend(regressor.trainable_variables)
+                        regressor_tuning_flag = True
+                    grads = tape.gradient(loss_value, to_train_variables)
+                    grad_norm += tf.linalg.global_norm(grads)
+                    optimizer.apply_gradients(zip(grads, to_train_variables))
+                    counts += 1.
 
-                val_epoch_pearson += pearson_correlation(y_pred=val_preds, y_true=y_batch_val)
-                val_epoch_spearman += spearman_correlation(y_pred=val_preds, y_true=y_batch_val)
-                val_epoch_mse += mse(y_pred=val_preds, y_true=y_batch_val)
-                val_epoch_mae += mae(y_pred=val_preds, y_true=y_batch_val)
-                counts += 1.
+            print('Training loss  at epoch %s: %s' % (epoch + 1, float(train_epoch_loss / counts)))
+            regressor_tuning_flag = False
 
-                # total_val_pearson += val_pearson / float(target_df.shape[-1])
-                # total_val_spearman += val_spearman / float(target_df.shape[-1])
-                # total_val_mse += val_mse / float(target_df.shape[-1])
-                # total_val_mae += val_mae / float(target_df.shape[-1])
-            validation_history['loss'].append(val_epoch_loss / counts)
-            validation_history['pearson'].append(val_epoch_pearson / counts)
-            validation_history['spearman'].append(val_epoch_spearman / counts)
-            validation_history['mse'].append(val_epoch_mse / counts)
-            validation_history['mae'].append(val_epoch_mae / counts)
+            training_history['loss'].append(train_epoch_loss / counts)
+            training_history['pearson'].append(train_epoch_pearson / counts)
+            training_history['spearman'].append(train_epoch_spearman / counts)
+            training_history['mse'].append(train_epoch_mse / counts)
+            training_history['mae'].append(train_epoch_mae / counts)
+            train_counts = counts
 
-            # print(validation_history['val_total'][validation_monitoring_metric][-1])
-            # print(best_overall_metric)
+            if val_dataset is not None:
+                val_epoch_loss = 0.
+                val_epoch_pearson = 0.
+                val_epoch_spearman = 0.
+                val_epoch_mse = 0.
+                val_epoch_mae = 0.
+                counts = 0.
 
-            if validation_history[validation_monitoring_metric][-1] > best_overall_metric:
-                best_overall_metric = validation_history[validation_monitoring_metric][-1]
-                best_epoch = epoch
-                encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
-                regressor.save_weights(os.path.join(output_folder, 'regressor_weights'), save_format='tf')
-                # print(len(to_train_variables))
+                for x_batch_val, y_batch_val in val_dataset:
+                    if repr(encoder).startswith('stochastic'):
+                        encoded_val_X = encoder(x_batch_val, training=False)[0]
+                    else:
+                        encoded_val_X = encoder(x_batch_val, training=False)
+                    val_preds = regressor(encoded_val_X, training=False)
 
-        if gradient_threshold is not None:
-            if grad_norm / train_counts < gradient_threshold:
-                break
+                    val_loss_value = loss_fn(y_pred=val_preds, y_true=y_batch_val)
+                    val_epoch_loss += val_loss_value
 
-    if val_dataset is None:
-        encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
-        regressor.save_weights(os.path.join(output_folder, 'regressor_weights'), save_format='tf')
+                    val_epoch_pearson += pearson_correlation(y_pred=val_preds, y_true=y_batch_val)
+                    val_epoch_spearman += spearman_correlation(y_pred=val_preds, y_true=y_batch_val)
+                    val_epoch_mse += mse(y_pred=val_preds, y_true=y_batch_val)
+                    val_epoch_mae += mae(y_pred=val_preds, y_true=y_batch_val)
+                    counts += 1.
 
-    return best_epoch, training_history, validation_history
+                validation_history['loss'].append(val_epoch_loss / counts)
+                validation_history['pearson'].append(val_epoch_pearson / counts)
+                validation_history['spearman'].append(val_epoch_spearman / counts)
+                validation_history['mse'].append(val_epoch_mse / counts)
+                validation_history['mae'].append(val_epoch_mae / counts)
+
+                if validation_history[validation_monitoring_metric][-1] > best_overall_metric:
+                    best_overall_metric = validation_history[validation_monitoring_metric][-1]
+                    best_epoch = epoch
+                    encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
+                    regressor.save_weights(os.path.join(output_folder, 'regressor_weights'), save_format='tf')
+
+            if gradient_threshold is not None:
+                if grad_norm / train_counts < gradient_threshold:
+                    break
+
+        if val_dataset is None:
+            encoder.save_weights(os.path.join(output_folder, 'fine_tuned_encoder_weights'), save_format='tf')
+            regressor.save_weights(os.path.join(output_folder, 'regressor_weights'), save_format='tf')
+
+        return best_epoch, training_history, validation_history
 
 
 def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset,
@@ -328,7 +337,30 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
                      diff_threshold=1e-2,
                      gradient_threshold=model_config.gradient_threshold,
                      exp_type='cv'):
-    output_folder = os.path.join('saved_weights', 'mut', exp_type, repr(auto_encoder.encoder) + '_encoder_weights')
+    """
+    :param auto_encoder:
+    :param reference_encoder:
+    :param train_dataset:
+    :param val_dataset:
+    :param transmission_loss_fn:
+    :param transmitter_flag:
+    :param alpha:
+    :param batch_size:
+    :param optimizer:
+    :param loss_fn:
+    :param min_epoch:
+    :param max_epoch:
+    :param tolerance:
+    :param diff_threshold:
+    :param gradient_threshold:
+    :param exp_type:
+    :return: best_epoch:
+             model_folder:
+             history_df:
+    """
+    output_folder = os.path.join('saved_weights', 'mut', exp_type, repr(auto_encoder.encoder) + '_encoder_weights',
+                                 transmission_loss_fn.__name__, str(transmitter_flag))
+    print(output_folder)
     safe_make_dir(output_folder)
 
     reference_folder = os.path.join('saved_weights', 'gex', exp_type, repr(reference_encoder) + '_encoder_weights')
@@ -448,13 +480,13 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
         if transmitter_flag:
             transmitter.save_weights(os.path.join(output_folder, 'pre_trained_transmitter_weights'),
                                      save_format='tf')
-        return best_epoch, auto_encoder.encoder, pd.DataFrame({
+        return best_epoch, output_folder, auto_encoder.encoder, pd.DataFrame({
             'train_loss': train_loss_history
         })
 
     else:
-        best_epoch, auto_encoder.encoder.load_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'))
-        return best_epoch, auto_encoder.encoder, pd.DataFrame({
+        auto_encoder.encoder.load_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'))
+        return best_epoch, output_folder, auto_encoder.encoder, pd.DataFrame({
             'train_loss': train_loss_history,
             'val_loss': val_loss_history
         })
@@ -474,8 +506,32 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
                               gradient_threshold=model_config.gradient_threshold,
                               exp_type='cv'):
     # track validation critic loss
+    """
 
-    output_folder = os.path.join('saved_weights', 'mut', exp_type, repr(auto_encoder.encoder) + '_encoder_weights')
+    :param auto_encoder:
+    :param reference_encoder:
+    :param train_dataset:
+    :param val_dataset:
+    :param alpha:
+    :param transmitter_flag:
+    :param batch_size:
+    :param optimizer:
+    :param loss_fn:
+    :param min_epoch:
+    :param max_epoch:
+    :param n_critic:
+    :param tolerance:
+    :param diff_threshold:
+    :param gradient_threshold:
+    :param exp_type:
+    :return: best_epoch:
+             model_folder:
+             history_df:
+    """
+
+    output_folder = os.path.join('saved_weights', 'mut', exp_type, repr(auto_encoder.encoder) + '_encoder_weights',
+                                 'wgan', str(transmitter_flag))
+    print(output_folder)
     safe_make_dir(output_folder)
 
     reference_folder = os.path.join('saved_weights', 'gex', exp_type, repr(reference_encoder) + '_encoder_weights')
@@ -631,13 +687,13 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
         if transmitter_flag:
             transmitter.save_weights(os.path.join(output_folder, 'pre_trained_transmitter_weights'),
                                      save_format='tf')
-        return best_epoch, auto_encoder.encoder, pd.DataFrame({
+        return best_epoch, output_folder, auto_encoder.encoder, pd.DataFrame({
             'train_critic_loss': train_loss_history,
             'train_gen_loss': train_gen_loss_history
         })
     else:
         auto_encoder.encoder.load_weights(os.path.join(output_folder, 'pre_trained_encoder_weights'))
-        return best_epoch, auto_encoder.encoder, pd.DataFrame({
+        return best_epoch, output_folder, auto_encoder.encoder, pd.DataFrame({
             'train_critic_loss': train_loss_history,
             'val_critic_loss': val_loss_history,
             'train_gen_loss': train_gen_loss_history,
@@ -646,7 +702,9 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
 
 
 def fine_tune_mut_encoder(encoder, train_dataset,
-                          val_dataset, batch_size=model_config.batch_size,
+                          val_dataset,
+                          model_folder,
+                          batch_size=model_config.batch_size,
                           regressor_mlp_architecture=model_config.regressor_architecture,
                           regressor_shared_layer_num=model_config.regressor_shared_layer_number,
                           regressor_act_fn=model_config.regressor_act_fn,
@@ -663,11 +721,31 @@ def fine_tune_mut_encoder(encoder, train_dataset,
                           gradient_threshold=model_config.gradient_threshold,
                           exp_type='cv'
                           ):
-    output_folder = os.path.join('saved_weights', 'mut', exp_type, repr(encoder) + '_encoder_weights')
+    """
+    :param encoder:
+    :param train_dataset:
+    :param val_dataset:
+    :param model_folder:
+    :param batch_size:
+    :param regressor_mlp_architecture:
+    :param regressor_shared_layer_num:
+    :param regressor_act_fn:
+    :param regressor_output_dim:
+    :param regressor_output_act_fn:
+    :param regressor_flag:
+    :param transmitter_flag:
+    :param loss_fn:
+    :param validation_monitoring_metric:
+    :param max_epoch:
+    :param min_epoch:
+    :param gradual_unfreezing_flag:
+    :param unfrozen_epoch:
+    :param gradient_threshold:
+    :param exp_type:
+    :return:
+    """
+    output_folder = model_folder
     reference_folder = os.path.join('saved_weights', 'gex', exp_type, repr(encoder) + '_encoder_weights')
-
-    safe_make_dir(output_folder)
-
     best_overall_metric = float('-inf')
     best_epoch = 0
     train_dataset = train_dataset.shuffle(buffer_size=512).batch(batch_size)
@@ -731,7 +809,7 @@ def fine_tune_mut_encoder(encoder, train_dataset,
                     if (epoch - min_epoch) % unfrozen_epoch == 0:
                         free_encoder_layers -= 1
                         lr *= model_config.decay
-                    for i in range(num_encoder_layers-1, free_encoder_layers - 1, -1):
+                    for i in range(num_encoder_layers - 1, free_encoder_layers - 1, -1):
                         to_train_variables.extend(encoder.layers[i].trainable_variables)
                     if free_encoder_layers <= 0:
                         gradual_unfreezing_flag = False
@@ -838,7 +916,6 @@ def fine_tune_mut_encoder(encoder, train_dataset,
         if transmitter_flag:
             transmitter.save_weights(os.path.join(output_folder, 'fine_tuned_transmitter_weights'),
                                      save_format='tf')
-
     return best_epoch, training_history, validation_history
 
 # def fine_tune_mut_encoder(encoder, reference_encoder, raw_X, raw_reference_X,

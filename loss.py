@@ -5,6 +5,11 @@ import tensorflow as tf
 from functools import partial
 from tensorflow.keras.losses import mean_squared_error, mean_absolute_error
 
+def rename(newname):
+    def decorator(f):
+        f.__name__ = newname
+        return f
+    return decorator
 
 # def penalized_mean_squared_error(y_true, y_pred, penalty=True):
 #     y_pred = tf.squeeze(y_pred)
@@ -135,6 +140,7 @@ def compute_cosine_distances_matrix(x, y):
     sim_matrix = tf.matmul(normalize_x, normalize_y, transpose_b=True)
     return sim_matrix
 
+@rename('contrastive')
 def contrastive_loss(y_true, y_pred):
     sim_matrix = compute_cosine_distances_matrix(y_true, y_pred)
     # return tf.math.log(tf.reduce_sum(tf.multiply(tf.exp(sim_matrix), -2 * (
@@ -172,6 +178,7 @@ def maximum_mean_discrepancy(x, y, kernel=gaussian_kernel_matrix):
     cost = tf.where(cost > 0, cost, 0)
     return cost
 
+@rename('mmd')
 def mmd_loss(y_true, y_pred):
     sigmas = [
         1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5, 10, 15, 20, 25, 30, 35, 100,
