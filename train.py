@@ -331,7 +331,7 @@ def pre_train_mut_AE(auto_encoder, reference_encoder, train_dataset, val_dataset
     output_folder = os.path.join('saved_weights', 'mut', exp_type, repr(auto_encoder.encoder) + '_encoder_weights')
     safe_make_dir(output_folder)
 
-    reference_folder = os.path.join('saved_weights', 'gex', exp_type, repr(encoder) + '_encoder_weights')
+    reference_folder = os.path.join('saved_weights', 'gex', exp_type, repr(reference_encoder) + '_encoder_weights')
     reference_encoder.load_weights(os.path.join(reference_folder, 'fine_tuned_encoder_weights'))
 
     train_dataset = train_dataset.shuffle(buffer_size=1024).batch(batch_size)
@@ -478,7 +478,7 @@ def pre_train_mut_AE_with_GAN(auto_encoder, reference_encoder, train_dataset, va
     output_folder = os.path.join('saved_weights', 'mut', exp_type, repr(auto_encoder.encoder) + '_encoder_weights')
     safe_make_dir(output_folder)
 
-    reference_folder = os.path.join('saved_weights', 'gex', exp_type, repr(encoder) + '_encoder_weights')
+    reference_folder = os.path.join('saved_weights', 'gex', exp_type, repr(reference_encoder) + '_encoder_weights')
     reference_encoder.load_weights(os.path.join(reference_folder, 'fine_tuned_encoder_weights'))
 
     critic = module.Critic(architecture=[128, 64, 32], output_dim=1)
