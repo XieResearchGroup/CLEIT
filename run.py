@@ -97,7 +97,9 @@ if __name__ == '__main__':
     fine_g_epoch, gex_fine_tune_train_history, gex_fine_tune_validation_history = train.fine_tune_gex_encoder(
         encoder=gex_encoder,
         train_dataset=train_dataset,
-        val_dataset=val_dataset)
+        val_dataset=val_dataset,
+        max_epoch=500
+    )
 
     with open(os.path.join('history', history_name), 'ab') as handle:
         pickle.dump(gex_fine_tune_train_history, handle)
