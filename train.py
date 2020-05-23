@@ -148,7 +148,8 @@ def fine_tune_gex_encoder(encoder,
                           gradual_unfreezing_flag=model_config.gradual_unfreezing_flag,
                           unfrozen_epoch=model_config.unfrozen_epoch,
                           gradient_threshold=model_config.gradient_threshold,
-                          exp_type='cv'
+                          exp_type='cv',
+                          load_flag=False
                           ):
     """
     :param encoder:
@@ -214,8 +215,7 @@ def fine_tune_gex_encoder(encoder,
                                         kernel_regularizer_l=model_config.kernel_regularizer_l)
     lr = model_config.fine_tuning_lr
     regressor_tuning_flag = False
-
-    if os.path.exists(os.path.join(output_folder, 'fine_tuned_encoder_weights.index')):
+    if load_flag and os.path.exists(os.path.join(output_folder, 'fine_tuned_encoder_weights.index')):
         print('Model trained already!')
         return best_epoch, training_history, validation_history
     else:
