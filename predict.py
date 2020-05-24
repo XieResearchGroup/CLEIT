@@ -22,7 +22,7 @@ def predict(inputs, pre_train_flag, clr_fn, transmitter_flag, dat_type, exp_type
         else:
             encoder.load_weights(
                 os.path.join('saved_weights', dat_type, exp_type, repr(encoder) + '_encoder_weights',
-                             'pre_trained_encoder_weights')
+                             clr_fn, str(transmitter_flag),'pre_trained_encoder_weights')
             )
 
     else:

@@ -40,7 +40,7 @@ if __name__ == '__main__':
     parser.add_argument('--target', dest='target', nargs='?', default='AUC', choices=['AUC', 'LN_IC50'])
     parser.add_argument('--filter', dest='filter', nargs='?', default='FILE', choices=['MAD', 'FILE'])
     parser.add_argument('--feat_num', dest='feature_number', nargs='?', default=5000)
-    parser.add_argument('--clr_fn', dest='clr_fn', nargs='?', default='mmd',
+    parser.add_argument('--clr_fn', dest='clr_fn', nargs='?', default='contrastive',
                         choices=['contrastive', 'mmd', 'wgan', 'none'])
 
     parser.add_argument('--gpu', dest='gpu', type=int, nargs='?', default=0)

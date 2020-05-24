@@ -149,7 +149,7 @@ def fine_tune_gex_encoder(encoder,
                           unfrozen_epoch=model_config.unfrozen_epoch,
                           gradient_threshold=model_config.gradient_threshold,
                           exp_type='cv',
-                          load_flag=False
+                          load_flag=True
                           ):
     """
     :param encoder:
