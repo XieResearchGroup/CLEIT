@@ -5,3 +5,4 @@ multi-omics-data-processing/*
 figs/*.ps
 predictions/
 history/
+mlp_test/*

@@ -248,7 +248,7 @@ if __name__ == '__main__':
         with open('best_epochs.pkl', 'rb') as fr:
             try:
                 while True:
-                    history.append(pickle.load(fr))
+                    best_epochs.append(pickle.load(fr))
             except EOFError:
                 pass
         pre_g_epoch = best_epochs[0]
