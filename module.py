@@ -13,6 +13,7 @@ class EncoderBlock(keras.Model):
         self.latent_dim = latent_dim
         self.architecture = architecture
         self.stochastic_flag = stochastic_flag
+        self.ln_layer = keras.layers.LayerNormalization()
         for dim in architecture:
             self.intermediate_layers.append(
                 DenseLayer(units=dim, activation=act_fn, kernel_regularizer_l=kernel_regularizer_l))
@@ -35,7 +36,7 @@ class EncoderBlock(keras.Model):
         # if training is not None:
         #    self.output_layer.trainable = training
         latent_code = self.output_layer(inputs)
-        latent_code = tf.nn.l2_normalize(latent_code, axis=1)
+        latent_code = self.ln_layer(latent_code)
         if self.stochastic_flag:
             # if training is not None:
             #    self.extra_output_layer.trainable = training

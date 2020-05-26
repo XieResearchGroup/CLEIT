@@ -4,9 +4,7 @@
     <list default="true" id="24740e00-0746-4525-a150-b7e4a54c424b" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.ipynb_checkpoints/test-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/.ipynb_checkpoints/test-checkpoint.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CLRN_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/CLRN_main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mlp_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/mlp_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/model_config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/module.py" beforeDir="false" afterPath="$PROJECT_DIR$/module.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -157,7 +155,7 @@
       <workItem from="1589255711018" duration="21605000" />
       <workItem from="1589654765595" duration="14914000" />
       <workItem from="1590006946712" duration="3231000" />
-      <workItem from="1590095599576" duration="25687000" />
+      <workItem from="1590095599576" duration="28139000" />
     </task>
     <servers />
   </component>
