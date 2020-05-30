@@ -7,23 +7,25 @@ class EncoderBlock(keras.Model):
     def __init__(self, latent_dim, architecture, act_fn='relu', output_act_fn=model_config.encoder_output_act_fn,
                  name='encoder',
                  stochastic_flag=False,
-                 kernel_regularizer_l=0.001, **kwargs):
+                 kernel_regularizer_l=model_config.kernel_regularizer_l, latent_penalty=model_config.latent_penalty,
+                 **kwargs):
         super(EncoderBlock, self).__init__(name=name, **kwargs)
         self.intermediate_layers = []
         self.latent_dim = latent_dim
         self.architecture = architecture
         self.stochastic_flag = stochastic_flag
-        self.ln_layer = keras.layers.LayerNormalization()
+        self.latent_penalty = latent_penalty
+        # self.ln_layer = keras.layers.LayerNormalization()
         for dim in architecture:
             self.intermediate_layers.append(
                 DenseLayer(units=dim, activation=act_fn, kernel_regularizer_l=kernel_regularizer_l))
         self.output_layer = keras.layers.Dense(latent_dim, kernel_initializer='he_normal',
-                                               bias_initializer=keras.initializers.Constant(value=0.1),
-                                               activation=output_act_fn)
+                                               activation=output_act_fn,
+                                               kernel_regularizer=keras.regularizers.l2(kernel_regularizer_l))
         if self.stochastic_flag:
             self.extra_output_layer = keras.layers.Dense(latent_dim, kernel_initializer='he_normal',
-                                                         bias_initializer=keras.initializers.Constant(value=0.1),
-                                                         activation=keras.activations.relu)
+                                                         activation=keras.activations.relu,
+                                                         kernel_regularizer=keras.regularizers.l2(kernel_regularizer_l))
 
     def __repr__(self):
         if self.stochastic_flag:
@@ -36,7 +38,8 @@ class EncoderBlock(keras.Model):
         # if training is not None:
         #    self.output_layer.trainable = training
         latent_code = self.output_layer(inputs)
-        latent_code = self.ln_layer(latent_code)
+        self.add_loss(self.latent_penalty, tf.norm(latent_code, ord=2))
+        # latent_code = self.ln_layer(latent_code)
         if self.stochastic_flag:
             # if training is not None:
             #    self.extra_output_layer.trainable = training
@@ -48,7 +51,7 @@ class EncoderBlock(keras.Model):
 
 class MLPBlock(keras.Model):
     def __init__(self, output_dim, architecture, act_fn='relu', output_act_fn=None, name='mlp',
-                 kernel_regularizer_l=0.001, **kwargs):
+                 kernel_regularizer_l=model_config.kernel_regularizer_l, **kwargs):
         super(MLPBlock, self).__init__(name=name, **kwargs)
         self.intermediate_layers = []
         self.architecture = architecture
@@ -57,8 +60,8 @@ class MLPBlock(keras.Model):
             self.intermediate_layers.append(
                 DenseLayer(units=dim, activation=act_fn, kernel_regularizer_l=kernel_regularizer_l))
         self.output_layer = keras.layers.Dense(output_dim, kernel_initializer='he_normal',
-                                               bias_initializer=keras.initializers.Constant(value=0.1),
-                                               activation=output_act_fn)
+                                               activation=output_act_fn,
+                                               kernel_regularizer=keras.regularizers.l2(kernel_regularizer_l))
 
     def __repr__(self):
         return utils.list_to_repr(self.architecture) + repr(self.output_dim)
@@ -74,7 +77,7 @@ class MLPBlock(keras.Model):
 
 class MLPBlockWithMask(keras.Model):
     def __init__(self, output_dim, architecture, shared_layer_num=1, act_fn='relu', output_act_fn=None, name='mlpm',
-                 kernel_regularizer_l=0.001, **kwargs):
+                 kernel_regularizer_l=model_config.kernel_regularizer_l, **kwargs):
         super(MLPBlockWithMask, self).__init__(name=name, **kwargs)
         self.intermediate_layers = []
         self.architecture = architecture
@@ -92,7 +95,8 @@ class MLPBlockWithMask(keras.Model):
                 DenseLayerWithMask(num_of_splits=self.output_dim, units_per_split=dim, activation=act_fn,
                                    kernel_regularizer_l=kernel_regularizer_l))
         self.output_layer = DenseLayerWithMask(num_of_splits=self.output_dim, units_per_split=1,
-                                               activation=output_act_fn, bn_flag=False)
+                                               activation=output_act_fn, bn_flag=False,
+                                               kernel_regularizer=keras.regularizers.l2(kernel_regularizer_l))
 
     def __repr__(self):
         return utils.list_to_repr(self.architecture) + repr(self.output_dim)
@@ -108,7 +112,7 @@ class MLPBlockWithMask(keras.Model):
 
 class Critic(keras.Model):
     def __init__(self, output_dim, architecture, act_fn='elu', output_act_fn=None, name='critic',
-                 kernel_regularizer_l=0.001, **kwargs):
+                 kernel_regularizer_l=model_config.kernel_regularizer_l, **kwargs):
         super(Critic, self).__init__(name=name, **kwargs)
         self.intermediate_layers = []
         self.architecture = architecture
@@ -117,8 +121,8 @@ class Critic(keras.Model):
             self.intermediate_layers.append(
                 LayerNormLayer(units=dim, activation=act_fn, kernel_regularizer_l=kernel_regularizer_l))
         self.output_layer = keras.layers.Dense(output_dim, kernel_initializer='he_normal',
-                                               bias_initializer=keras.initializers.Constant(value=0.1),
-                                               activation=output_act_fn)
+                                               activation=output_act_fn,
+                                               kernel_regularizer=keras.regularizers.l2(kernel_regularizer_l))
 
     def __repr__(self):
         return utils.list_to_repr(self.architecture) + repr(self.output_dim)
@@ -134,7 +138,7 @@ class Critic(keras.Model):
 
 class AE(keras.Model):
     def __init__(self, latent_dim, output_dim, architecture, act_fn='relu', output_act_fn=None,
-                 kernel_regularizer_l=0.001,
+                 kernel_regularizer_l=model_config.kernel_regularizer_l,
                  noise_fn=None, name='ae', **kwargs):
         super(AE, self).__init__(name=name, **kwargs)
         if noise_fn is not None:
@@ -158,7 +162,7 @@ class AE(keras.Model):
 class VAE(keras.Model):
     # beta VAE
     def __init__(self, latent_dim, output_dim, architecture, act_fn='relu', output_act_fn=None, beta=1.0,
-                 kernel_regularizer_l=0.001,
+                 kernel_regularizer_l=model_config.kernel_regularizer_l,
                  noise_fn=None, name='ae', **kwargs):
         super(VAE, self).__init__(name=name, **kwargs)
         if noise_fn is not None:

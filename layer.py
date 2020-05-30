@@ -15,7 +15,6 @@ class DenseLayer(keras.layers.Layer):
             self.kernel_regularizer = None
         self.dense_layer = keras.layers.Dense(units=self.units,
                                               kernel_initializer=self.kernel_initializer,
-                                              bias_initializer=keras.initializers.Constant(value=0.1),
                                               kernel_regularizer=self.kernel_regularizer)
         self.bn_layer = keras.layers.BatchNormalization(renorm=True)
         self.act_layer = keras.layers.Activation(activation=activation)
@@ -26,8 +25,8 @@ class DenseLayer(keras.layers.Layer):
         #    self.dense_layer.trainable = training
         #    self.bn_layer.trainable = training
         output = self.dense_layer(inputs)
-        output = self.bn_layer(output, training=training)
         output = self.act_layer(output)
+        output = self.bn_layer(output, training=training)
 
         return output
 
@@ -64,7 +63,6 @@ class DenseLayerWithMask(keras.layers.Layer):
                                       trainable=True)
 
         self.bias = self.add_weight(name='bias', shape=(self.units_per_split * self.num_of_splits,),
-                                    initializer=keras.initializers.Constant(value=0.1),
                                     regularizer=self.kernel_regularizer,
                                     trainable=True)
         self.mask = tf.constant(block_diag(
@@ -105,7 +103,6 @@ class DropOutLayer(keras.layers.Layer):
             self.kernel_regularizer = None
         self.dense_layer = keras.layers.Dense(units=self.units,
                                               kernel_initializer=self.kernel_initializer,
-                                              bias_initializer=keras.initializers.Constant(value=0.1),
                                               kernel_regularizer=self.kernel_regularizer)
         self.do_layer = keras.layers.Dropout()
         self.act_layer = keras.layers.Activation(activation=activation)
@@ -142,7 +139,6 @@ class LayerNormLayer(keras.layers.Layer):
             self.kernel_regularizer = None
         self.dense_layer = keras.layers.Dense(units=self.units,
                                               kernel_initializer=self.kernel_initializer,
-                                              bias_initializer=keras.initializers.Constant(value=0.1),
                                               kernel_regularizer=self.kernel_regularizer)
         self.ln_layer = keras.layers.LayerNormalization()
         self.act_layer = keras.layers.Activation(activation=activation)
