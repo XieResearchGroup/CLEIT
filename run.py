@@ -98,7 +98,7 @@ if __name__ == '__main__':
         encoder=gex_encoder,
         train_dataset=train_dataset,
         val_dataset=val_dataset,
-        max_epoch=500
+        load_flag=False
     )
 
     with open(os.path.join('history', history_name), 'ab') as handle:
