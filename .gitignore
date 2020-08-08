@@ -6,3 +6,7 @@ figs/*.ps
 predictions/
 history/
 mlp_test/*
+.idea/*
+.ipynb_checkpoints/
+__pycache__/
+archive/*
