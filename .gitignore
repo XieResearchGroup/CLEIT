@@ -10,3 +10,4 @@ mlp_test/*
 .ipynb_checkpoints/
 __pycache__/
 archive/*
+*.Rhistory
