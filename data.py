@@ -1,14 +1,12 @@
 import os
 import datetime
-
 import numpy as np
 import random
 import pandas as pd
 import data_config
-import preprocess_ccle_gdsc_utils
-import preprocess_xena_utils
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sklearn.model_selection import KFold
+import torch
+from torch.utils.data import TensorDataset, DataLoader
+from sklearn.model_selection import train_test_split, StratifiedKFold
 
 _RNG_SEED = None
 
@@ -30,158 +28,196 @@ def get_rng(obj=None):
     return random.Random(seed)
 
 
-def min_max_scale(X_train):
-    preprocessor = MinMaxScaler((0, 1)).fit(X_train)
-    # X_train = preprocessor.transform(X_train)
-    # X_test = preprocessor.transform(X_test)
-    return preprocessor
-
-
-def standardize_scale(X_train):
-    preprocessor = StandardScaler().fit(X_train)
-    # X_train = preprocessor.transform(X_train)
-    # X_test = preprocessor.transform(X_test)
-    return preprocessor
-
-
-def sample_min_max_scale(df):
-    min_vec = df.min(axis=1)
-    max_vec = df.max(axis=1)
-    return df.sub(min_vec, axis=0).div(max_vec - min_vec, axis=0)
-
-
-def sample_standardize_scale(df):
-    mean_vec = df.mean(axis=1)
-    std_vec = df.std(axis=1)
-    return df.sub(mean_vec, axis=0).div(std_vec, axis=0)
-
-
-def align_feature(df1, df2):
-    matched_features = list(set(df1.columns.tolist()) & set(df2.columns.tolist()))
-    matched_features.sort()
-    print('Aligned dataframes have {} features in common'.format(len(matched_features)))
-    return df1[matched_features], df2[matched_features]
-
-
 class DataProvider:
-    def __init__(self, feature_filter=None, feature_number=5000, propagation=True, target='AUC', scale_fn=min_max_scale,
-                 omics=None,
-                 random_seed=2019):
-        self.omics = omics
-        self.random_seed = random_seed
-        self.feature_filter = feature_filter
-        self.feature_number = feature_number
-        self.propagation = propagation
+    def __init__(self, batch_size=64, target='AUC', random_seed=2019):
+        self.seed = random_seed
         self.target = target
-        self.scale_fn = scale_fn
-        self.labeled_data, self.unlabeled_data, self.labeled_test_data = self._load_data()
-        self.shape_dict = self._get_shape_dict()
-        self.matched_index = self._get_matched_index()
+        self.batch_size = batch_size
+        self._load_gex_data()
+        self._load_mut_data()
+        self._load_target_data()
+        self.shape_dict = {'gex': self.gex_dat.shape[-1],
+                           'mut': self.mut_dat.shape[-1],
+                           'target': 1}
 
-    def _load_data(self):
-        xena_gex_dat = pd.read_csv(data_config.xena_preprocessed_gex_file + '.csv', index_col=0)
-        if self.propagation:
-            xena_mut_dat = pd.read_csv(data_config.xena_preprocessed_mut_file + '_propagated.csv', index_col=0)
+    def _load_gex_data(self):
+        self.gex_dat = pd.read_csv(data_config.gex_feature_file, index_col=0)
+        # ccle_sample_info_df = pd.read_csv(data_config.ccle_sample_file, index_col=0)
+        # with gzip.open(data_config.xena_sample_file) as f:
+        #     xena_sample_info_df = pd.read_csv(f, sep='\t', index_col=0)
+        # xena_samples = xena_sample_info_df.index.intersection(self.gex_dat.index)
+        # ccle_samples = self.gex_dat.index.difference(xena_samples)
+        # xena_sample_info_df = xena_sample_info_df.loc[xena_samples]
+        # ccle_sample_info_df = ccle_sample_info_df.loc[ccle_samples.intersection(ccle_sample_info_df.index)]
+        # self.xena_gex_df = self.gex_dat.loc[xena_samples]
+        # self.mut_gex_df = self.gex_dat.loc[ccle_samples]
+
+    def _load_mut_data(self):
+        self.xena_mut_dat = pd.read_csv(data_config.xena_mut_uq_file, index_col=0)
+        self.ccle_mut_dat = pd.read_csv(data_config.ccle_mut_uq_file, index_col=0)
+        self.mut_dat = self.xena_mut_dat.append(self.ccle_mut_dat)
+
+    def _load_target_data(self):
+        gdsc1_response = pd.read_csv(data_config.gdsc_target_file1)
+        gdsc2_response = pd.read_csv(data_config.gdsc_target_file2)
+        gdsc1_sensitivity_df = gdsc1_response[['COSMIC_ID', 'DRUG_NAME', self.target]]
+        gdsc2_sensitivity_df = gdsc2_response[['COSMIC_ID', 'DRUG_NAME', self.target]]
+        gdsc1_sensitivity_df.loc[:, 'DRUG_NAME'] = gdsc1_sensitivity_df['DRUG_NAME'].str.lower()
+        gdsc2_sensitivity_df.loc[:, 'DRUG_NAME'] = gdsc2_sensitivity_df['DRUG_NAME'].str.lower()
+
+        if self.target == 'LN_IC50':
+            gdsc1_sensitivity_df.loc[:, self.target] = np.exp(gdsc1_sensitivity_df[self.target])
+            gdsc2_sensitivity_df.loc[:, self.target] = np.exp(gdsc2_sensitivity_df[self.target])
+
+        gdsc1_target_df = gdsc1_sensitivity_df.groupby(['COSMIC_ID', 'DRUG_NAME']).mean()
+        gdsc2_target_df = gdsc2_sensitivity_df.groupby(['COSMIC_ID', 'DRUG_NAME']).mean()
+        gdsc1_target_df = gdsc1_target_df.loc[gdsc1_target_df.index.difference(gdsc2_target_df.index)]
+        gdsc_target_df = pd.concat([gdsc1_target_df, gdsc2_target_df])
+        target_df = gdsc_target_df.reset_index().pivot_table(values=self.target, index='COSMIC_ID', columns='DRUG_NAME')
+        ccle_sample_info = pd.read_csv(data_config.ccle_sample_file, index_col=4)
+        ccle_sample_info = ccle_sample_info.loc[ccle_sample_info.index.dropna()]
+        ccle_sample_info.index = ccle_sample_info.index.astype('int')
+
+        gdsc_sample_info = pd.read_csv(data_config.gdsc_sample_file, header=0, index_col=1)
+        gdsc_sample_info = gdsc_sample_info.loc[gdsc_sample_info.index.dropna()]
+        gdsc_sample_info.index = gdsc_sample_info.index.astype('int')
+
+        gdsc_sample_mapping = gdsc_sample_info.merge(ccle_sample_info, left_index=True, right_index=True, how='inner')[
+            ['DepMap_ID']]
+        gdsc_sample_mapping_dict = gdsc_sample_mapping.to_dict()['DepMap_ID']
+
+        target_df.index = target_df.index.map(gdsc_sample_mapping_dict)
+        target_df = target_df.loc[target_df.index.dropna()]
+        gex_labeled_samples = self.gex_dat.index.intersection(target_df.index)
+
+        target_df.drop(columns=target_df.columns[
+            target_df.loc[gex_labeled_samples].isna().sum() / len(gex_labeled_samples) >= 0.8], inplace=True)
+        self.target_df = target_df
+
+    def get_unlabeled_gex_dataloader(self):
+        gex_dataset = TensorDataset(torch.from_numpy(self.gex_dat.values.astype('float32')))
+        unlabeled_gex_dataloader = DataLoader(gex_dataset,
+                                              batch_size=self.batch_size,
+                                              shuffle=True)
+
+        return unlabeled_gex_dataloader
+
+    def get_drug_labeled_gex_dataloader(self, drug, ft_flag=True):
+        drug_target_df = self.target_df[drug]
+        drug_target_df.dropna(inplace=True)
+        drug_gex_labeled_samples = self.gex_dat.index.intersection(drug_target_df.index)
+        # get gex dataset and dataloader
+        drug_gex_target_df = drug_target_df.loc[drug_gex_labeled_samples]
+        gex_label_vec = (drug_gex_target_df < np.median(drug_gex_target_df)).astype('int')
+
+        if not ft_flag:
+            pass
+            # labeled_gex_dataset = TensorDataset(
+            #     torch.from_numpy(self.gex_dat.loc[drug_gex_labeled_samples].values.astype('float32')),
+            #     torch.from_numpy(drug_gex_target_df.values.astype('float32'))
+            #     )
+            # labeled_gex_dataloader = DataLoader(labeled_gex_dataset,
+            #                                     batch_size=self.batch_size,
+            #                                     shuffle=True)
+            # return labeled_gex_dataloader
         else:
-            xena_mut_dat = pd.read_csv(data_config.xena_preprocessed_mut_file + '.csv', index_col=0)
-        gex_dat = preprocess_ccle_gdsc_utils.preprocess_ccle_gex_df(file_path=data_config.ccle_gex_file)
-        mut_dat = preprocess_ccle_gdsc_utils.preprocess_ccle_mut(propagation_flag=self.propagation,
-                                                                 mutation_dat_file=data_config.ccle_mut_file)
-        if self.feature_filter == 'MAD':
-            xena_gex_dat, gex_dat = align_feature(xena_gex_dat, gex_dat)
-            xena_mut_dat, mut_dat = align_feature(xena_mut_dat, mut_dat)
-            xena_gex_dat = preprocess_xena_utils.preprocess_gex_df(df=xena_gex_dat, MAD=True,
-                                                                   feature_num=self.feature_number)
-            xena_gex_dat, gex_dat = align_feature(xena_gex_dat, gex_dat)
-            xena_mut_dat = preprocess_xena_utils.filter_with_MAD(xena_mut_dat, k=self.feature_number)
-            xena_mut_dat, mut_dat = align_feature(xena_mut_dat, mut_dat)
+            s_kfold = StratifiedKFold(n_splits=5, random_state=self.seed)
+            for train_index, test_index in s_kfold.split(self.gex_dat.loc[drug_gex_labeled_samples].values,
+                                                         gex_label_vec):
+                train_labeled_df, test_labeled_df = self.gex_dat.loc[drug_gex_labeled_samples].values[train_index], \
+                                                    self.gex_dat.loc[drug_gex_labeled_samples].values[test_index]
+                train_labels, test_labels = drug_gex_target_df.values[train_index], drug_gex_target_df.values[
+                    test_index]
 
-        elif self.feature_filter is not None:
-            feature_list = pd.read_csv(data_config.gene_feature_file, sep='\t', header=None).iloc[:, 0].values.tolist()
-            xena_gex_dat = preprocess_xena_utils.preprocess_gex_df(df=xena_gex_dat, feature_list=feature_list)
-            xena_gex_dat, gex_dat = align_feature(xena_gex_dat, gex_dat)
-            mut_genes_to_keep = list(set(xena_mut_dat.columns.tolist()) & set(feature_list))
-            xena_mut_dat = xena_mut_dat[mut_genes_to_keep]
-            xena_mut_dat, mut_dat = align_feature(xena_mut_dat, mut_dat)
+                train_labeled_dateset = TensorDataset(
+                    torch.from_numpy(train_labeled_df.astype('float32')),
+                    torch.from_numpy(train_labels))
+                test_labeled_dateset = TensorDataset(
+                    torch.from_numpy(test_labeled_df.astype('float32')),
+                    torch.from_numpy(test_labels))
+
+                train_labeled_dataloader = DataLoader(train_labeled_dateset,
+                                                      batch_size=self.batch_size,
+                                                      shuffle=True)
+
+                test_labeled_dataloader = DataLoader(test_labeled_dateset,
+                                                     batch_size=self.batch_size,
+                                                     shuffle=True)
+
+                yield train_labeled_dataloader, test_labeled_dataloader
+
+    def get_drug_labeled_mut_dataloader(self, drug, ft_flag=True):
+        drug_target_df = self.target_df[drug]
+        drug_target_df.dropna(inplace=True)
+        drug_gex_labeled_samples = self.gex_dat.index.intersection(drug_target_df.index)
+        drug_mut_labeled_samples = self.ccle_mut_dat.index.intersection(drug_target_df.index)
+        drug_mut_only_labeled_samples = drug_mut_labeled_samples.difference(drug_gex_labeled_samples)
+        drug_mut_labeled_samples = drug_mut_labeled_samples.difference(drug_mut_only_labeled_samples)
+
+        drug_mut_target_df = drug_target_df.loc[drug_mut_labeled_samples]
+        mut_label_vec = (drug_mut_target_df < np.median(drug_mut_target_df)).astype('int')
+
+        labeled_drug_mut_only_dataset = TensorDataset(
+            torch.from_numpy(self.ccle_mut_dat.loc[drug_mut_only_labeled_samples].values.astype('float32')),
+            torch.from_numpy(drug_target_df.loc[drug_mut_only_labeled_samples].values.astype('float32'))
+        )
+
+        labeled_drug_mut_only_dataloader = DataLoader(labeled_drug_mut_only_dataset,
+                                                      batch_size=self.batch_size,
+                                                      shuffle=True)
+        if not ft_flag:
+            pass
+            # labeled_mut_dataset = TensorDataset(
+            #     torch.from_numpy(self.ccle_mut_dat.loc[drug_mut_labeled_samples].values.astype('float32')),
+            #     torch.from_numpy(drug_mut_target_df.values.astype('float32'))
+            # )
+            # labeled_mut_dataloader = DataLoader(labeled_mut_dataset,
+            #                                     batch_size=self.batch_size,
+            #                                     shuffle=True)
+            # return labeled_mut_dataloader, labeled_drug_mut_only_dataloader
+
         else:
-            xena_gex_dat, gex_dat = align_feature(xena_gex_dat, gex_dat)
-            xena_mut_dat, mut_dat = align_feature(xena_mut_dat, mut_dat)
+            s_kfold = StratifiedKFold(n_splits=5, random_state=self.seed)
+            for train_index, test_index in s_kfold.split(self.ccle_mut_dat.loc[drug_mut_labeled_samples].values,
+                                                         mut_label_vec):
+                train_labeled_df, test_labeled_df = self.ccle_mut_dat.loc[drug_mut_labeled_samples].values[train_index], \
+                                                    self.ccle_mut_dat.loc[drug_mut_labeled_samples].values[test_index]
+                train_labels, test_labels = drug_mut_target_df.values[train_index], drug_mut_target_df.values[
+                    test_index]
 
-        target_dat = preprocess_ccle_gdsc_utils.preprocess_target_data()
+                train_labeled_dateset = TensorDataset(
+                    torch.from_numpy(train_labeled_df.astype('float32')),
+                    torch.from_numpy(train_labels))
+                test_labeled_dateset = TensorDataset(
+                    torch.from_numpy(test_labeled_df.astype('float32')),
+                    torch.from_numpy(test_labels))
 
-        target_samples = list(
-             set(gex_dat.index.to_list()) & set(mut_dat.index.to_list()) & set(target_dat.index.to_list()))
-        mut_only_target_samples = list(
-             set(mut_dat.index.to_list()) & set(target_dat.index.to_list()) - set(gex_dat.index.to_list()))
+                train_labeled_dataloader = DataLoader(train_labeled_dateset,
+                                                      batch_size=self.batch_size,
+                                                      shuffle=True)
 
-        #
-        # target_samples = list(
-        #     set(gex_dat.index.tolist()) & set(mut_dat.index.tolist()) & set(target_dat.index.tolist()))
-        # mut_only_target_samples = list(
-        #     set(mut_dat.index.tolist()) & set(target_dat.index.tolist()) - set(gex_dat.index.tolist()))
+                test_labeled_dataloader = DataLoader(test_labeled_dateset,
+                                                     batch_size=self.batch_size,
+                                                     shuffle=True)
 
-        labeled_gex_dat = gex_dat.loc[target_samples, :]
-        labeled_mut_dat = mut_dat.loc[target_samples, :]
-        labeled_mut_only_dat = mut_dat.loc[mut_only_target_samples,:]
-        labeled_targets_dat = target_dat.loc[target_samples, :]
-        labeled_mut_only_target_dat = target_dat.loc[mut_only_target_samples, :]
-        unlabeled_gex_dat = pd.concat(
-            [xena_gex_dat, gex_dat.loc[~gex_dat.index.isin(target_samples+mut_only_target_samples), :]])
-        unlabeled_mut_dat = pd.concat(
-            [xena_mut_dat, mut_dat.loc[~mut_dat.index.isin(target_samples+mut_only_target_samples), :]])
+                yield train_labeled_dataloader, test_labeled_dataloader, labeled_drug_mut_only_dataloader
 
-        if self.scale_fn:
-            # self.gex_scaler = min_max_scale(xena_gex_dat)
-            # self.mut_scaler = min_max_scale(xena_mut_dat)
-            self.gex_scaler = self.scale_fn(pd.concat([xena_gex_dat, gex_dat]))
-            self.mut_scaler = self.scale_fn(pd.concat([xena_mut_dat, mut_dat]))
+    def get_unlabeld_mut_dataloader(self, match=True):
+        if match:
+            mut_gex_samples = self.gex_dat.index.intersection(self.mut_dat.index)
+            mut_gex_dataset = TensorDataset(
+                torch.from_numpy(self.mut_dat.loc[mut_gex_samples].values.astype('float32')),
+                torch.from_numpy(self.gex_dat.loc[mut_gex_samples].values.astype('float32'))
+                )
+            unlabeled_mut_gex_dataloader = DataLoader(mut_gex_dataset,
+                                                      batch_size=self.batch_size,
+                                                      shuffle=True)
+            return unlabeled_mut_gex_dataloader
 
-            labeled_gex_dat = pd.DataFrame(self.gex_scaler.transform(labeled_gex_dat),
-                                           index=labeled_gex_dat.index, columns=labeled_gex_dat.columns)
-            unlabeled_gex_dat = pd.DataFrame(self.gex_scaler.transform(unlabeled_gex_dat),
-                                             index=unlabeled_gex_dat.index, columns=unlabeled_gex_dat.columns)
-            labeled_mut_dat = pd.DataFrame(self.mut_scaler.transform(labeled_mut_dat),
-                                           index=labeled_mut_dat.index, columns=labeled_mut_dat.columns)
-            labeled_mut_only_dat = pd.DataFrame(self.mut_scaler.transform(labeled_mut_only_dat),
-                                           index=labeled_mut_only_dat.index, columns=labeled_mut_only_dat.columns)
-            unlabeled_mut_dat = pd.DataFrame(self.mut_scaler.transform(unlabeled_mut_dat),
-                                             index=unlabeled_mut_dat.index, columns=unlabeled_mut_dat.columns)
+        else:
+            mut_dataset = TensorDataset(torch.from_numpy(self.mut_dat.values.astype('float32')))
+            unlabeled_mut_dataloader = DataLoader(mut_dataset,
+                                                  batch_size=self.batch_size,
+                                                  shuffle=True)
 
-        labeled_data = dict()
-        unlabeled_data = dict()
-        labeled_test_dat = dict()
-        labeled_data['mut'] = labeled_mut_dat
-        labeled_data['gex'] = labeled_gex_dat
-        labeled_data['target'] = labeled_targets_dat
-        unlabeled_data['mut'] = unlabeled_mut_dat
-        unlabeled_data['gex'] = unlabeled_gex_dat
-        labeled_test_dat['mut'] = labeled_mut_only_dat
-        labeled_test_dat['target'] = labeled_mut_only_target_dat
-
-        self.target_scaler = dict()
-        for drug in labeled_data['target'].columns:
-            self.target_scaler[drug] = min_max_scale(
-                labeled_data['target'].loc[~labeled_data['target'][drug].isna(), drug].values.reshape(-1, 1))
-            labeled_data['target'].loc[~labeled_data['target'][drug].isna(), drug] = np.squeeze(
-                self.target_scaler[drug].transform(
-                    labeled_data['target'].loc[~labeled_data['target'][drug].isna(), drug].values.reshape(-1, 1)))
-
-        return labeled_data, unlabeled_data, labeled_test_dat
-
-    def _get_shape_dict(self):
-        shape_dict = dict()
-        for omic in self.omics:
-            shape_dict[omic] = self.labeled_data[omic].shape[-1]
-        shape_dict['target'] = self.labeled_data['target'].shape[-1]
-        return shape_dict
-
-    def _get_matched_index(self):
-        matched_index = self.unlabeled_data[self.omics[0]].index
-        for omic in self.omics[1:]:
-            matched_index = matched_index.intersection(self.unlabeled_data[omic].index)
-        return matched_index
-
-    def get_k_folds(self, k=5):
-        kfold = KFold(n_splits=k, shuffle=True, random_state=self.random_seed)
-        cv_splits = list(kfold.split(self.labeled_data['target']))
-        return cv_splits
+            return unlabeled_mut_dataloader

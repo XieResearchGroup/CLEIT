@@ -62,6 +62,7 @@ def preprocess_gex_df(file_path=data_config.xena_gex_file, df=None, MAD=False, f
         # df = df.groupby('gene').mean()
         df = df.transpose()
         df = np.log1p(df)
+        df = np.clip(df, a_min=0, a_max=None)
         df.index.name = 'Sample'
     if MAD:
         df = df.transpose()
@@ -115,7 +116,7 @@ def preprocess_mut(propagation_flag=True, mutation_dat_file=data_config.xena_mut
             features_to_propagate = kernel.index.intersection(features_to_propagate)
             # print(features_to_propagate)
             if len(features_to_propagate) > 0:
-                propagation_result.loc[sample_id,] = kernel.loc[features_to_propagate].sum(axis=0)
+                propagation_result.loc[sample_id] = kernel.loc[features_to_propagate].sum(axis=0)
             else:
                 to_drop.append(sample_id)
         if len(to_drop) > 0:

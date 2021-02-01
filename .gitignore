@@ -1,4 +1,4 @@
-dat/*
+data/*
 saved_weights/*
 multi-omics-data-processing/*
 *.ipynb

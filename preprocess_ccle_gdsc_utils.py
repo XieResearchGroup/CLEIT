@@ -6,44 +6,44 @@ import data_config
 import string
 import feather
 
-def normalize_celline_names(s):
-    s = s.upper()
-    translator = str.maketrans('', '', string.punctuation + ' ')
-    return s.translate(translator)
+# def normalize_celline_names(s):
+#     s = s.upper()
+#     translator = str.maketrans('', '', string.punctuation + ' ')
+#     return s.translate(translator)
+#
+#
+# def get_normalized_ccle_sample_dict(file_path=data_config.ccle_sample_file):
+#     ccle_celline_info = pd.read_csv(file_path, sep='\t')
+#     ccle_celline_info['Cell line primary name'] = ccle_celline_info['Cell line primary name'].map(
+#         normalize_celline_names)
+#     ccle_celline_info.loc[ccle_celline_info['CCLE name'] == 'TT_OESOPHAGUS', 'Cell line primary name']='T.T'
+#     ccle_celline_mapping_dict = pd.Series(ccle_celline_info['Cell line primary name'].values,
+#                                           index=ccle_celline_info['CCLE name']).to_dict()
+#     return ccle_celline_mapping_dict
 
 
-def get_normalized_ccle_sample_dict(file_path=data_config.ccle_sample_file):
-    ccle_celline_info = pd.read_csv(file_path, sep='\t')
-    ccle_celline_info['Cell line primary name'] = ccle_celline_info['Cell line primary name'].map(
-        normalize_celline_names)
-    ccle_celline_info.loc[ccle_celline_info['CCLE name'] == 'TT_OESOPHAGUS', 'Cell line primary name']='T.T'
-    ccle_celline_mapping_dict = pd.Series(ccle_celline_info['Cell line primary name'].values,
-                                          index=ccle_celline_info['CCLE name']).to_dict()
-    return ccle_celline_mapping_dict
-
-
-def preprocess_gdsc_target_dat(gdsc1_file=data_config.gdsc_target_file1, gdsc2_file=data_config.gdsc_target_file2,
-                               score='AUC', output_file_path=None):
-    gdsc1_target_dat = pd.read_csv(gdsc1_file)[['CELL_LINE_NAME', 'DRUG_NAME', score]]
-    gdsc2_target_dat = pd.read_csv(gdsc2_file)[['CELL_LINE_NAME', 'DRUG_NAME', score]]
-
-    if score == 'LN_IC50':
-        gdsc1_target_dat[score] = np.exp(gdsc1_target_dat[score])
-        gdsc2_target_dat[score] = np.exp(gdsc2_target_dat[score])
-
-    gdsc1_target_dat = gdsc1_target_dat.groupby(['CELL_LINE_NAME', 'DRUG_NAME']).mean()
-    gdsc2_target_dat = gdsc2_target_dat.groupby(['CELL_LINE_NAME', 'DRUG_NAME']).mean()
-    gdsc1_target_dat = gdsc1_target_dat.loc[gdsc1_target_dat.index.difference(gdsc2_target_dat.index)]
-    target_dat = pd.concat([gdsc1_target_dat, gdsc2_target_dat], axis=0)
-    target_dat.reset_index(inplace=True)
-    target_dat['CELL_LINE_NAME'] = target_dat['CELL_LINE_NAME'].map(normalize_celline_names)
-
-    if score == 'LN_IC50':
-        target_dat[score] = np.log(target_dat[score])
-
-    if output_file_path:
-        target_dat.to_csv(output_file_path+'.csv')
-    return target_dat
+# def preprocess_gdsc_target_dat(gdsc1_file=data_config.gdsc_target_file1, gdsc2_file=data_config.gdsc_target_file2,
+#                                score='AUC', output_file_path=None):
+#     gdsc1_target_dat = pd.read_csv(gdsc1_file)[['CELL_LINE_NAME', 'DRUG_NAME', score]]
+#     gdsc2_target_dat = pd.read_csv(gdsc2_file)[['CELL_LINE_NAME', 'DRUG_NAME', score]]
+#
+#     if score == 'LN_IC50':
+#         gdsc1_target_dat[score] = np.exp(gdsc1_target_dat[score])
+#         gdsc2_target_dat[score] = np.exp(gdsc2_target_dat[score])
+#
+#     gdsc1_target_dat = gdsc1_target_dat.groupby(['CELL_LINE_NAME', 'DRUG_NAME']).mean()
+#     gdsc2_target_dat = gdsc2_target_dat.groupby(['CELL_LINE_NAME', 'DRUG_NAME']).mean()
+#     gdsc1_target_dat = gdsc1_target_dat.loc[gdsc1_target_dat.index.difference(gdsc2_target_dat.index)]
+#     target_dat = pd.concat([gdsc1_target_dat, gdsc2_target_dat], axis=0)
+#     target_dat.reset_index(inplace=True)
+#     target_dat['CELL_LINE_NAME'] = target_dat['CELL_LINE_NAME'].map(normalize_celline_names)
+#
+#     if score == 'LN_IC50':
+#         target_dat[score] = np.log(target_dat[score])
+#
+#     if output_file_path:
+#         target_dat.to_csv(output_file_path+'.csv')
+#     return target_dat
 
 
 def preprocess_target_data(score='AUC', output_file_path=None):
@@ -110,35 +110,11 @@ def preprocess_ccle_gex_df(file_path=data_config.ccle_gex_file,
         df.to_csv(output_file_path + '.csv', index_label='Sample')
     return df
 
-
-def getBinaryMat(df, sample_id='Tumor_Sample_Barcode', feature_id='Hugo_Symbol'):
-    genes = list(set(df[feature_id][~df[feature_id].isna()]))
-    genes.sort()
-    df = df.copy()
-    df['Score'] = 1
-    result_mat = df.groupby([sample_id, feature_id])['Score'].max()
-    result_mat = result_mat.unstack(level=1, fill_value=0)
-    #result = pd.DataFrame(np.zeros((result_mat.shape[0], len(genes))), columns=genes, index=result_mat.index)
-    #for col in result_mat.columns:
-    #    result[col] = result_mat[col]
-    #result.columns = [str(col) for col in result.columns]
-    return result_mat
-
-
 def load_ccle_muation_df(file_path=data_config.ccle_mut_file, filtered_variant=['Silent'], network_id_file=None):
-    #mutation_df = pd.read_csv(file_path, header=0, sep='\t')
-    #mutation_df = mutation_df[~ mutation_df.Variant_Classification.isin(filtered_variant)]
-    #binary_mutation_df = getBinaryMat(mutation_df)
-    #normalized_name_dict = {name: name for name in binary_mutation_df.index}
-    #normalized_name_dict.update(get_normalized_ccle_sample_dict())
-    #binary_mutation_df.index = binary_mutation_df.index.map(normalized_name_dict)
-
     mutation_df = pd.read_csv(file_path, index_col=1)[['DepMap_ID', 'Variant_Classification']]
     mutation_df = mutation_df[~ mutation_df.Variant_Classification.isin(filtered_variant)]
-
     mutation_df.drop(columns=['Variant_Classification'], inplace=True)
     mutation_df['Score'] = 1
-
     binary_mutation_df = pd.pivot_table(data=mutation_df, columns='Hugo_Symbol', index='DepMap_ID', values='Score', fill_value=0,
                          aggfunc=max)
 
@@ -176,7 +152,7 @@ def preprocess_ccle_mut(propagation_flag=True, mutation_dat_file=data_config.ccl
             features_to_propagate = kernel.index.intersection(features_to_propagate)
             # print(features_to_propagate)
             if len(features_to_propagate) > 0:
-                propagation_result.loc[sample_id,] = kernel.loc[features_to_propagate].sum(axis=0)
+                propagation_result.loc[sample_id] = kernel.loc[features_to_propagate].sum(axis=0)
             else:
                 to_drop.append(sample_id)
         if len(to_drop) > 0:
