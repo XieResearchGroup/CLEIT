@@ -117,6 +117,7 @@ def main(args, update_params_dict):
                 encoder=ft_encoder,
                 train_dataloader=train_labeled_dataloader,
                 val_dataloader=val_labeled_dataloader,
+                test_dataloader=val_labeled_dataloader,
                 seed=fold_count,
                 metric_name=args.metric,
                 task_save_folder=task_save_folder,
@@ -124,7 +125,7 @@ def main(args, update_params_dict):
             )
 
             for metric in ['pearsonr', 'spearmanr', 'r2', 'rmse']:
-                ft_evaluation_metrics[metric].append(ft_historys[-1][metric][ft_historys[-1]['best_index']])
+                ft_evaluation_metrics[metric].append(ft_historys[-1][metric][ft_historys[-2]['best_index']])
             fold_count += 1
     else:
         labeled_dataloader_generator = data_provider.get_drug_labeled_mut_dataloader(drug=args.drug)
@@ -145,7 +146,7 @@ def main(args, update_params_dict):
                 **wrap_training_params(training_params, type='labeled')
             )
             for metric in ['pearsonr', 'spearmanr', 'r2', 'rmse']:
-                ft_evaluation_metrics[metric].append(ft_historys[-2][metric][ft_historys[-1]['best_index']])
+                ft_evaluation_metrics[metric].append(ft_historys[-2][metric][ft_historys[-2]['best_index']])
                 test_ft_evaluation_metrics[metric].append(ft_historys[-1][metric][ft_historys[-2]['best_index']])
             fold_count += 1
         with open(os.path.join(task_save_folder, f'{param_str}_test_ft_evaluation_results.json'), 'w') as f:
