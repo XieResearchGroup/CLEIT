@@ -1,9 +1,6 @@
 import os
-from itertools import chain
-
 from ae import AE
 from evaluation_utils import *
-from mlp import MLP
 from loss_and_metrics import mmd_loss
 
 
@@ -37,54 +34,6 @@ def ae_train_step(ae, s_batch, t_batch, device, optimizer, history, scheduler=No
     history['mmd_loss'].append(m_loss.cpu().detach().item())
 
     return history
-
-
-def train_dcc(s_dataloaders, t_dataloaders, **kwargs):
-    """
-
-    :param s_dataloaders:
-    :param t_dataloaders:
-    :param kwargs:
-    :return:
-    """
-    s_train_dataloader = s_dataloaders
-    s_test_dataloader = s_dataloaders
-
-    t_train_dataloader = t_dataloaders
-    t_test_dataloader = t_dataloaders
-
-    import torch
-    import os
-    from evaluation_utils import eval_ae_epoch, model_save_check
-    from collections import defaultdict
-    from ae import AE
-
-    def ae_train_step(ae, s_batch, t_batch, device, optimizer, history, scheduler=None):
-        ae.zero_grad()
-        ae.train()
-
-        s_x = s_batch[0].to(device)
-        t_x = t_batch[0].to(device)
-
-        s_loss_dict = ae.loss_function(*ae(s_x))
-        t_loss_dict = ae.loss_function(*ae(t_x))
-
-        optimizer.zero_grad()
-        loss = s_loss_dict['loss'] + t_loss_dict['loss']
-        optimizer.zero_grad()
-
-        loss.backward()
-        optimizer.step()
-        if scheduler is not None:
-            scheduler.step()
-
-        loss_dict = {k: v.cpu().detach().item() + t_loss_dict[k].cpu().detach().item() for k, v in s_loss_dict.items()}
-
-        for k, v in loss_dict.items():
-            history[k].append(v)
-
-        return history
-
 
 def train_dcc(s_dataloaders, t_dataloaders, **kwargs):
     """
