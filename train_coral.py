@@ -89,11 +89,11 @@ def train_coral(s_dataloaders, t_dataloaders, **kwargs):
     :param kwargs:
     :return:
     """
-    s_train_dataloader = s_dataloaders[0]
-    s_test_dataloader = s_dataloaders[1]
+    s_train_dataloader = s_dataloaders
+    s_test_dataloader = s_dataloaders
 
-    t_train_dataloader = t_dataloaders[0]
-    t_test_dataloader = t_dataloaders[1]
+    t_train_dataloader = t_dataloaders
+    t_test_dataloader = t_dataloaders
 
     autoencoder = AE(input_dim=kwargs['input_dim'],
                      latent_dim=kwargs['latent_dim'],
