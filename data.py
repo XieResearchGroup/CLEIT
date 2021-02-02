@@ -217,13 +217,16 @@ class DataProvider:
                 )
             unlabeled_mut_gex_dataloader = DataLoader(mut_gex_dataset,
                                                       batch_size=self.batch_size,
-                                                      shuffle=True)
+                                                      shuffle=True,
+                                                      drop_last=True
+                                                      )
             return unlabeled_mut_gex_dataloader
 
         else:
             mut_dataset = TensorDataset(torch.from_numpy(self.mut_dat.values.astype('float32')))
             unlabeled_mut_dataloader = DataLoader(mut_dataset,
                                                   batch_size=self.batch_size,
-                                                  shuffle=True)
+                                                  shuffle=True,
+                                                  drop_last=True)
 
             return unlabeled_mut_dataloader
