@@ -130,8 +130,8 @@ class DataProvider:
                                                          gex_label_vec):
                 train_labeled_df, test_labeled_df = self.gex_dat.loc[drug_gex_labeled_samples].values[train_index], \
                                                     self.gex_dat.loc[drug_gex_labeled_samples].values[test_index]
-                train_labels, test_labels = drug_gex_target_df.values[train_index], drug_gex_target_df.values[
-                    test_index]
+                train_labels, test_labels = drug_gex_target_df.values[train_index].astype('float32'), drug_gex_target_df.values[
+                    test_index].astype('float32')
 
                 train_labeled_dateset = TensorDataset(
                     torch.from_numpy(train_labeled_df.astype('float32')),
@@ -187,8 +187,8 @@ class DataProvider:
                                                          mut_label_vec):
                 train_labeled_df, test_labeled_df = self.ccle_mut_dat.loc[drug_mut_labeled_samples].values[train_index], \
                                                     self.ccle_mut_dat.loc[drug_mut_labeled_samples].values[test_index]
-                train_labels, test_labels = drug_mut_target_df.values[train_index], drug_mut_target_df.values[
-                    test_index]
+                train_labels, test_labels = drug_mut_target_df.values[train_index].astype('float32'), drug_mut_target_df.values[
+                    test_index].astype('float32')
 
                 train_labeled_dateset = TensorDataset(
                     torch.from_numpy(train_labeled_df.astype('float32')),
