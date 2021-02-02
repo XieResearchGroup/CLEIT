@@ -11,8 +11,9 @@ import itertools
 from data import DataProvider
 import data_config
 import train_coral
-import fine_tuning
 import train_dsn
+import train_dann
+import fine_tuning
 from copy import deepcopy
 
 
@@ -74,7 +75,7 @@ def main(args, update_params_dict):
     elif args.method == 'dsn':
         train_fn = train_dsn.train_dsn
     elif args.method == 'dann':
-        raise NotImplementedError
+        train_fn=train_dann.train_dann
     elif args.method == 'adda':
         raise NotImplementedError
     elif args.method == 'dcc':
