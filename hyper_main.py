@@ -8,19 +8,9 @@ import pickle
 from collections import defaultdict
 import itertools
 
-import data
+from data import DataProvider
 import data_config
-import train_ndsn
-import train_adae
-import train_adsn
-import train_coral
-import train_dae
 import train_vae
-import train_ae
-import train_mdsn
-import train_dsnw
-import train_dsn
-
 import fine_tuning
 import ml_baseline
 
@@ -97,7 +87,7 @@ def main(args, update_params_dict):
     else:
         train_fn = train_adsn.train_adsn
 
-    normalize_flag = args.method in ['adsn', 'mdsn', 'ndsn']
+    # normalize_flag = args.method in ['adsn', 'mdsn', 'ndsn']
     # normalize_flag = False
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -250,17 +240,13 @@ def main(args, update_params_dict):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser('ADSN training and evaluation')
+    parser = argparse.ArgumentParser('CLEIT training and evaluation')
     parser.add_argument('--method', dest='method', nargs='?', default='adsn',
-                        choices=['adsn', 'dsn', 'ndsn', 'mdsn', 'dsnw', 'adae', 'coral', 'dae', 'vae', 'ae'])
+                        choices=['cleit', 'cleita', 'cleitm', 'dsn', 'dcc', 'dann', 'coral', 'adaa'])
     parser.add_argument('--drug', dest='drug', nargs='?', default='gem', choices=['gem', 'fu', 'cis', 'tem'])
-    parser.add_argument('--metric', dest='metric', nargs='?', default='auroc', choices=['auroc', 'auprc'])
-
+    parser.add_argument('--metric', dest='metric', nargs='?', default='pearsonr', choices=['pearsonr', 'rmse'])
     parser.add_argument('--measurement', dest='measurement', nargs='?', default='AUC', choices=['AUC', 'LN_IC50'])
-    parser.add_argument('--a_thres', dest='a_thres', nargs='?', type=float, default=None)
-    parser.add_argument('--d_thres', dest='days_thres', nargs='?', type=float, default=None)
-
-    parser.add_argument('--n', dest='n', nargs='?', type=int, default=10)
+    parser.add_argument('--n', dest='n', nargs='?', type=int, default=5)
 
     train_group = parser.add_mutually_exclusive_group(required=False)
     train_group.add_argument('--train', dest='retrain_flag', action='store_true')
@@ -270,13 +256,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     params_grid = {
-        "pretrain_num_epochs": [0, 50, 100, 200, 300],
+        #"pretrain_num_epochs": [0, 50, 100, 200, 300],
         "train_num_epochs": [100, 200, 300, 500, 750, 1000, 1500, 2000, 2500, 3000],
         "dop": [0.0, 0.1]
     }
 
-    if args.method not in ['adsn', 'adae', 'dsnw']:
-        params_grid.pop('pretrain_num_epochs')
+    # if args.method not in ['adsn', 'adae', 'dsnw']:
+    #     params_grid.pop('pretrain_num_epochs')
 
     keys, values = zip(*params_grid.items())
     update_params_dict_list = [dict(zip(keys, v)) for v in itertools.product(*values)]

@@ -10,6 +10,9 @@ from sklearn.model_selection import train_test_split, StratifiedKFold
 
 _RNG_SEED = None
 
+DRUG_DICT={
+    'gem': 'gemcitabine'
+}
 
 def get_rng(obj=None):
     """
@@ -103,6 +106,7 @@ class DataProvider:
         return unlabeled_gex_dataloader
 
     def get_drug_labeled_gex_dataloader(self, drug, ft_flag=True):
+        drug = DRUG_DICT[drug]
         drug_target_df = self.target_df[drug]
         drug_target_df.dropna(inplace=True)
         drug_gex_labeled_samples = self.gex_dat.index.intersection(drug_target_df.index)
@@ -147,6 +151,7 @@ class DataProvider:
                 yield train_labeled_dataloader, test_labeled_dataloader
 
     def get_drug_labeled_mut_dataloader(self, drug, ft_flag=True):
+        drug = DRUG_DICT[drug]
         drug_target_df = self.target_df[drug]
         drug_target_df.dropna(inplace=True)
         drug_gex_labeled_samples = self.gex_dat.index.intersection(drug_target_df.index)
