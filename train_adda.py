@@ -1,7 +1,7 @@
 import os
 import torch.autograd as autograd
 from itertools import chain
-from dsn_ae import DSNAE
+from ae import AE
 from evaluation_utils import *
 from mlp import MLP
 from train_ndsn import eval_dsnae_epoch, dsn_ae_train_step

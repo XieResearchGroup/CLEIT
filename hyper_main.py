@@ -13,6 +13,7 @@ import data_config
 import train_coral
 import train_dsn
 import train_dann
+import train_dcc
 import fine_tuning
 from copy import deepcopy
 
@@ -79,7 +80,7 @@ def main(args, update_params_dict):
     elif args.method == 'adda':
         raise NotImplementedError
     elif args.method == 'dcc':
-        raise NotImplementedError
+        train_fn = train_dcc.train_dcc
     else:
         raise NotImplementedError
 
