@@ -11,7 +11,8 @@ from sklearn.model_selection import train_test_split, StratifiedKFold
 _RNG_SEED = None
 
 DRUG_DICT={
-    'gem': 'gemcitabine'
+    'gem': 'gemcitabine',
+    'ava': 'avagacestat',
 }
 
 def get_rng(obj=None):
