@@ -82,7 +82,7 @@ def fine_tune_encoder(encoder, train_dataloader, val_dataloader, seed, task_save
         if epoch % 50 == 0:
             print(f'Fine tuning epoch {epoch}')
         for step, batch in enumerate(train_dataloader):
-            target_regression_train_history = classification_train_step(model=target_regressor,
+            target_regression_train_history = regression_train_step(model=target_regressor,
                                                                         batch=batch,
                                                                         device=kwargs['device'],
                                                                         optimizer=target_regression_optimizer,
