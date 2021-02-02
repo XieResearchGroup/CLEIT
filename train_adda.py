@@ -1,10 +1,8 @@
 import os
 import torch.autograd as autograd
-from itertools import chain
 from ae import AE
 from evaluation_utils import *
 from mlp import MLP
-from train_ndsn import eval_dsnae_epoch, dsn_ae_train_step
 
 
 def compute_gradient_penalty(critic, real_samples, fake_samples, device):
@@ -29,20 +27,18 @@ def compute_gradient_penalty(critic, real_samples, fake_samples, device):
     return gradient_penalty
 
 
-def critic_dsn_train_step(critic, s_dsnae, t_dsnae, s_batch, t_batch, device, optimizer, history, scheduler=None,
+def critic_dsn_train_step(critic, ae, s_batch, t_batch, device, optimizer, history, scheduler=None,
                           clip=None, gp=None):
     critic.zero_grad()
-    s_dsnae.zero_grad()
-    t_dsnae.zero_grad()
-    s_dsnae.eval()
-    t_dsnae.eval()
+    ae.zero_grad()
+    ae.eval()
     critic.train()
 
     s_x = s_batch[0].to(device)
     t_x = t_batch[0].to(device)
 
-    s_code = s_dsnae.s_encode(s_x)
-    t_code = t_dsnae.s_encode(t_x)
+    s_code = ae.s_encode(s_x)
+    t_code = ae.s_encode(t_x)
 
     loss = torch.mean(critic(t_code)) - torch.mean(critic(s_code))
     if gp is not None:
@@ -69,24 +65,22 @@ def critic_dsn_train_step(critic, s_dsnae, t_dsnae, s_batch, t_batch, device, op
     return history
 
 
-def gan_dsn_gen_train_step(critic, s_dsnae, t_dsnae, s_batch, t_batch, device, optimizer, alpha, history,
+def gan_dsn_gen_train_step(critic, ae, s_batch, t_batch, device, optimizer, alpha, history,
                            scheduler=None):
     critic.zero_grad()
-    s_dsnae.zero_grad()
-    t_dsnae.zero_grad()
+    ae.zero_grad()
     critic.eval()
-    s_dsnae.train()
-    t_dsnae.train()
+    ae.train()
 
     s_x = s_batch[0].to(device)
     t_x = t_batch[0].to(device)
 
-    t_code = t_dsnae.s_encode(t_x)
+    t_code = ae.s_encode(t_x)
 
     optimizer.zero_grad()
     gen_loss = -torch.mean(critic(t_code))
-    s_loss_dict = s_dsnae.loss_function(*s_dsnae(s_x))
-    t_loss_dict = t_dsnae.loss_function(*t_dsnae(t_x))
+    s_loss_dict = ae.loss_function(*ae(s_x))
+    t_loss_dict = ae.loss_function(*ae(t_x))
     recons_loss = s_loss_dict['loss'] + t_loss_dict['loss']
     loss = recons_loss + alpha * gen_loss
     optimizer.zero_grad()
@@ -105,7 +99,7 @@ def gan_dsn_gen_train_step(critic, s_dsnae, t_dsnae, s_batch, t_batch, device, o
     return history
 
 
-def train_dsnw(s_dataloaders, t_dataloaders, **kwargs):
+def train_adda(s_dataloaders, t_dataloaders, **kwargs):
     """
 
     :param s_dataloaders:
@@ -113,131 +107,38 @@ def train_dsnw(s_dataloaders, t_dataloaders, **kwargs):
     :param kwargs:
     :return:
     """
-    s_train_dataloader = s_dataloaders[0]
-    s_test_dataloader = s_dataloaders[1]
+    s_train_dataloader = s_dataloaders
+    s_test_dataloader = s_dataloaders
 
-    t_train_dataloader = t_dataloaders[0]
-    t_test_dataloader = t_dataloaders[1]
+    t_train_dataloader = t_dataloaders
+    t_test_dataloader = t_dataloaders
 
-    shared_encoder = MLP(input_dim=kwargs['input_dim'],
-                         output_dim=kwargs['latent_dim'],
-                         hidden_dims=kwargs['encoder_hidden_dims'],
-                         dop=kwargs['dop']).to(kwargs['device'])
-
-    shared_decoder = MLP(input_dim=2 * kwargs['latent_dim'],
-                         output_dim=kwargs['input_dim'],
-                         hidden_dims=kwargs['encoder_hidden_dims'][::-1],
-                         dop=kwargs['dop']).to(kwargs['device'])
-
-    s_dsnae = DSNAE(shared_encoder=shared_encoder,
-                    decoder=shared_decoder,
-                    alpha=kwargs['alpha'],
-                    input_dim=kwargs['input_dim'],
-                    latent_dim=kwargs['latent_dim'],
-                    hidden_dims=kwargs['encoder_hidden_dims'],
-                    dop=kwargs['dop']).to(kwargs['device'])
-
-    t_dsnae = DSNAE(shared_encoder=shared_encoder,
-                    decoder=shared_decoder,
-                    alpha=kwargs['alpha'],
-                    input_dim=kwargs['input_dim'],
-                    latent_dim=kwargs['latent_dim'],
-                    hidden_dims=kwargs['encoder_hidden_dims'],
-                    dop=kwargs['dop']).to(kwargs['device'])
+    autoencoder = AE(input_dim=kwargs['input_dim'],
+                     latent_dim=kwargs['latent_dim'],
+                     hidden_dims=kwargs['encoder_hidden_dims'],
+                     noise_flag=False,
+                     dop=kwargs['dop']).to(kwargs['device'])
 
     confounding_classifier = MLP(input_dim=kwargs['latent_dim'],
                                  output_dim=1,
                                  hidden_dims=kwargs['classifier_hidden_dims'],
                                  dop=kwargs['dop']).to(kwargs['device'])
 
-
-    dsnae_train_history = defaultdict(list)
-    dsnae_val_history = defaultdict(list)
+    ae_train_history = defaultdict(list)
+    ae_val_history = defaultdict(list)
     critic_train_history = defaultdict(list)
     gen_train_history = defaultdict(list)
-    # classification_eval_test_history = defaultdict(list)
-    # classification_eval_train_history = defaultdict(list)
 
     if kwargs['retrain_flag']:
-        ae_params = [t_dsnae.private_encoder.parameters(),
-                     s_dsnae.private_encoder.parameters(),
-                     shared_decoder.parameters(),
-                     shared_encoder.parameters()
-                     ]
-        t_ae_params = [t_dsnae.private_encoder.parameters(),
-                       s_dsnae.private_encoder.parameters(),
-                       shared_decoder.parameters(),
-                       shared_encoder.parameters()
-                       ]
-
-        ae_optimizer = torch.optim.AdamW(chain(*ae_params), lr=kwargs['lr'])
+        ae_optimizer = torch.optim.AdamW(autoencoder.parameters(), lr=kwargs['lr'])
         classifier_optimizer = torch.optim.RMSprop(confounding_classifier.parameters(), lr=kwargs['lr'])
-        t_ae_optimizer = torch.optim.RMSprop(chain(*t_ae_params), lr=kwargs['lr'])
-        # start dsnae pre-training
-        for epoch in range(int(kwargs['pretrain_num_epochs'])):
-            if epoch % 50 == 0:
-                print(f'AE training epoch {epoch}')
-            for step, s_batch in enumerate(s_train_dataloader):
-                t_batch = next(iter(t_train_dataloader))
-                dsnae_train_history = dsn_ae_train_step(s_dsnae=s_dsnae,
-                                                        t_dsnae=t_dsnae,
-                                                        s_batch=s_batch,
-                                                        t_batch=t_batch,
-                                                        device=kwargs['device'],
-                                                        optimizer=ae_optimizer,
-                                                        history=dsnae_train_history)
-            dsnae_val_history = eval_dsnae_epoch(model=s_dsnae,
-                                                 data_loader=s_test_dataloader,
-                                                 device=kwargs['device'],
-                                                 history=dsnae_val_history
-                                                 )
-            dsnae_val_history = eval_dsnae_epoch(model=t_dsnae,
-                                                 data_loader=t_test_dataloader,
-                                                 device=kwargs['device'],
-                                                 history=dsnae_val_history
-                                                 )
-            for k in dsnae_val_history:
-                if k != 'best_index':
-                    dsnae_val_history[k][-2] += dsnae_val_history[k][-1]
-                    dsnae_val_history[k].pop()
-
-            save_flag, stop_flag = model_save_check(dsnae_val_history, metric_name='loss', tolerance_count=20)
-            if kwargs['es_flag']:
-                if save_flag:
-                    torch.save(s_dsnae.state_dict(), os.path.join(kwargs['model_save_folder'], 'a_s_dsnae.pt'))
-                    torch.save(t_dsnae.state_dict(), os.path.join(kwargs['model_save_folder'], 'a_t_dsnae.pt'))
-                if stop_flag:
-                    break
-
-        if kwargs['es_flag']:
-            s_dsnae.load_state_dict(torch.load(os.path.join(kwargs['model_save_folder'], 'a_s_dsnae.pt')))
-            t_dsnae.load_state_dict(torch.load(os.path.join(kwargs['model_save_folder'], 'a_t_dsnae.pt')))
-
-        # start critic pre-training
-        # for epoch in range(100):
-        #     if epoch % 10 == 0:
-        #         print(f'confounder critic pre-training epoch {epoch}')
-        #     for step, t_batch in enumerate(s_train_dataloader):
-        #         s_batch = next(iter(t_train_dataloader))
-        #         critic_train_history = critic_dsn_train_step(critic=confounding_classifier,
-        #                                                      s_dsnae=s_dsnae,
-        #                                                      t_dsnae=t_dsnae,
-        #                                                      s_batch=s_batch,
-        #                                                      t_batch=t_batch,
-        #                                                      device=kwargs['device'],
-        #                                                      optimizer=classifier_optimizer,
-        #                                                      history=critic_train_history,
-        #                                                      clip=None,
-        #                                                      gp=None)
-        # start GAN training
         for epoch in range(int(kwargs['train_num_epochs'])):
             if epoch % 50 == 0:
                 print(f'confounder wgan training epoch {epoch}')
             for step, s_batch in enumerate(s_train_dataloader):
                 t_batch = next(iter(t_train_dataloader))
                 critic_train_history = critic_dsn_train_step(critic=confounding_classifier,
-                                                             s_dsnae=s_dsnae,
-                                                             t_dsnae=t_dsnae,
+                                                             ae=autoencoder,
                                                              s_batch=s_batch,
                                                              t_batch=t_batch,
                                                              device=kwargs['device'],
@@ -247,21 +148,19 @@ def train_dsnw(s_dataloaders, t_dataloaders, **kwargs):
                                                              gp=10.0)
                 if (step + 1) % 5 == 0:
                     gen_train_history = gan_dsn_gen_train_step(critic=confounding_classifier,
-                                                               s_dsnae=s_dsnae,
-                                                               t_dsnae=t_dsnae,
+                                                               ae=autoencoder,
                                                                s_batch=s_batch,
                                                                t_batch=t_batch,
                                                                device=kwargs['device'],
-                                                               optimizer=t_ae_optimizer,
+                                                               optimizer=ae_optimizer,
                                                                alpha=1.0,
                                                                history=gen_train_history)
 
-        torch.save(s_dsnae.state_dict(), os.path.join(kwargs['model_save_folder'], 'a_s_dsnae.pt'))
-        torch.save(t_dsnae.state_dict(), os.path.join(kwargs['model_save_folder'], 'a_t_dsnae.pt'))
+        torch.save(autoencoder.state_dict(), os.path.join(kwargs['model_save_folder'], 'ae.pt'))
     else:
         try:
-            s_dsnae.load_state_dict(torch.load(os.path.join(kwargs['model_save_folder'], 'a_s_dsnae.pt')))
+            autoencoder.load_state_dict(torch.load(os.path.join(kwargs['model_save_folder'], 'ae.pt')))
         except FileNotFoundError:
             raise Exception("No pre-trained encoder")
 
-    return shared_encoder, (dsnae_train_history, dsnae_val_history, critic_train_history, gen_train_history)
+    return autoencoder.encoder, (ae_train_history, ae_val_history, critic_train_history, gen_train_history)

@@ -9,11 +9,14 @@ from collections import defaultdict
 import itertools
 
 from data import DataProvider
-import data_config
 import train_coral
 import train_dsn
 import train_dann
 import train_dcc
+import train_adda
+import train_cleit
+import train_cleitm
+import train_cleita
 import fine_tuning
 from copy import deepcopy
 
@@ -76,9 +79,9 @@ def main(args, update_params_dict):
     elif args.method == 'dsn':
         train_fn = train_dsn.train_dsn
     elif args.method == 'dann':
-        train_fn=train_dann.train_dann
+        train_fn = train_dann.train_dann
     elif args.method == 'adda':
-        raise NotImplementedError
+        train_fn = train_adda.train_adda
     elif args.method == 'dcc':
         train_fn = train_dcc.train_dcc
     else:
