@@ -150,9 +150,9 @@ if __name__ == '__main__':
 
     params_grid = {
         #"pretrain_num_epochs": [0, 50, 100, 200, 300],
-        #"train_num_epochs": [100, 200, 300, 500, 750, 1000, 1500, 2000, 2500, 3000],
-        #"dop": [0.0, 0.1]
-        "train_num_epochs": [100]
+        "train_num_epochs": [100, 200, 300, 500, 750, 1000, 1500, 2000, 2500, 3000, 4000, 5000],
+        "dop": [0.0, 0.1, 0.2]
+        #"train_num_epochs": [100]
     }
 
     # if args.method not in ['adsn', 'adae', 'dsnw']:
