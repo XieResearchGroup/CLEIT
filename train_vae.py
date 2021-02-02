@@ -41,6 +41,7 @@ def train_vae(dataloader, **kwargs):
                       dop=kwargs['dop']).to(kwargs['device'])
 
     ae_eval_train_history = defaultdict(list)
+    ae_eval_test_history = defaultdict(list)
 
     if kwargs['retrain_flag']:
         ae_optimizer = torch.optim.AdamW(autoencoder.parameters(), lr=kwargs['lr'])
@@ -50,7 +51,7 @@ def train_vae(dataloader, **kwargs):
                 print(f'----Autoencoder Training Epoch {epoch} ----')
             for step, batch in enumerate(dataloader):
                 ae_eval_train_history = ae_train_step(ae=autoencoder,
-                                                      batch= batch,
+                                                      batch=batch,
                                                       device=kwargs['device'],
                                                       optimizer=ae_optimizer,
                                                       history=ae_eval_train_history)
@@ -62,4 +63,4 @@ def train_vae(dataloader, **kwargs):
             raise Exception("No pre-trained encoder")
 
 
-    return autoencoder.encoder, (ae_eval_train_history)
+    return autoencoder.encoder, (ae_eval_train_history, ae_eval_test_history)
