@@ -156,7 +156,7 @@ def main(args, update_params_dict):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('CLEIT training and evaluation')
     parser.add_argument('--method', dest='method', nargs='?', default='coral',
-                        choices=['cleit', 'cleita', 'cleitm', 'dsn', 'dcc', 'dann', 'coral', 'adaa'])
+                        choices=['cleit', 'cleita', 'cleitm', 'dsn', 'dcc', 'dann', 'coral', 'adda'])
     parser.add_argument('--drug', dest='drug', nargs='?', default='gem', choices=['gem', 'fu', 'cis', 'tem'])
     parser.add_argument('--metric', dest='metric', nargs='?', default='pearsonr', choices=['pearsonr', 'rmse'])
     parser.add_argument('--measurement', dest='measurement', nargs='?', default='AUC', choices=['AUC', 'LN_IC50'])
