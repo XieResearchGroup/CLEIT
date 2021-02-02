@@ -107,27 +107,49 @@ def main(args, update_params_dict):
             pickle.dump(dict(history), f)
 
     ft_evaluation_metrics = defaultdict(list)
+    if args.omics == 'gex':
+        labeled_dataloader_generator = data_provider.get_drug_labeled_gex_dataloader(drug=args.drug)
+        fold_count = 0
+        for train_labeled_dataloader, val_labeled_dataloader in labeled_dataloader_generator:
+            ft_encoder = deepcopy(encoder)
 
-    labeled_dataloader_generator = data_provider.get_drug_labeled_gex_dataloader(drug=args.drug)
+            target_classifier, ft_historys = fine_tuning.fine_tune_encoder(
+                encoder=ft_encoder,
+                train_dataloader=train_labeled_dataloader,
+                val_dataloader=val_labeled_dataloader,
+                seed=fold_count,
+                metric_name=args.metric,
+                task_save_folder=task_save_folder,
+                **wrap_training_params(training_params, type='labeled')
+            )
 
-    fold_count = 0
-    for train_labeled_dataloader, val_labeled_dataloader in labeled_dataloader_generator:
-        ft_encoder = deepcopy(encoder)
+            for metric in ['pearsonr', 'spearmanr', 'r2', 'rmse']:
+                ft_evaluation_metrics[metric].append(ft_historys[-1][metric][ft_historys[-2]['best_index']])
+            fold_count += 1
+    else:
+        labeled_dataloader_generator = data_provider.get_drug_labeled_mut_dataloader(drug=args.drug)
+        fold_count = 0
+        test_ft_evaluation_metrics = defaultdict(list)
 
-        target_classifier, ft_historys = fine_tuning.fine_tune_encoder(
-            encoder=ft_encoder,
-            train_dataloader=train_labeled_dataloader,
-            val_dataloader=val_labeled_dataloader,
-            seed=fold_count,
-            metric_name=args.metric,
-            task_save_folder=task_save_folder,
-            **wrap_training_params(training_params, type='labeled')
-        )
+        for train_labeled_dataloader, val_labeled_dataloader, test_labeled_dataloader in labeled_dataloader_generator:
+            ft_encoder = deepcopy(encoder)
 
-        for metric in ['pearsonr', 'spearmanr', 'r2', 'rmse']:
-            ft_evaluation_metrics[metric].append(ft_historys[-1][metric][ft_historys[-2]['best_index']])
-        fold_count += 1
-
+            target_classifier, ft_historys = fine_tuning.fine_tune_encoder(
+                encoder=ft_encoder,
+                train_dataloader=train_labeled_dataloader,
+                val_dataloader=val_labeled_dataloader,
+                test_dataloader=test_labeled_dataloader,
+                seed=fold_count,
+                metric_name=args.metric,
+                task_save_folder=task_save_folder,
+                **wrap_training_params(training_params, type='labeled')
+            )
+            for metric in ['pearsonr', 'spearmanr', 'r2', 'rmse']:
+                ft_evaluation_metrics[metric].append(ft_historys[-2][metric][ft_historys[-2]['best_index']])
+                test_ft_evaluation_metrics[metric].append(ft_historys[-1][metric][ft_historys[-2]['best_index']])
+            fold_count += 1
+        with open(os.path.join(task_save_folder, f'{param_str}_test_ft_evaluation_results.json'), 'w') as f:
+            json.dump(test_ft_evaluation_metrics, f)
     with open(os.path.join(task_save_folder, f'{param_str}_ft_evaluation_results.json'), 'w') as f:
         json.dump(ft_evaluation_metrics, f)
 

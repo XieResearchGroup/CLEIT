@@ -62,4 +62,4 @@ def train_vae(dataloader, **kwargs):
             raise Exception("No pre-trained encoder")
 
 
-    return autoencoder.encoder, ae_eval_train_history
+    return autoencoder.encoder, (ae_eval_train_history)
