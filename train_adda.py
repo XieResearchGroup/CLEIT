@@ -37,8 +37,8 @@ def critic_dsn_train_step(critic, ae, s_batch, t_batch, device, optimizer, histo
     s_x = s_batch[0].to(device)
     t_x = t_batch[0].to(device)
 
-    s_code = ae.s_encode(s_x)
-    t_code = ae.s_encode(t_x)
+    s_code = ae.encode(s_x)
+    t_code = ae.encode(t_x)
 
     loss = torch.mean(critic(t_code)) - torch.mean(critic(s_code))
     if gp is not None:
@@ -75,7 +75,7 @@ def gan_dsn_gen_train_step(critic, ae, s_batch, t_batch, device, optimizer, alph
     s_x = s_batch[0].to(device)
     t_x = t_batch[0].to(device)
 
-    t_code = ae.s_encode(t_x)
+    t_code = ae.encode(t_x)
 
     optimizer.zero_grad()
     gen_loss = -torch.mean(critic(t_code))
