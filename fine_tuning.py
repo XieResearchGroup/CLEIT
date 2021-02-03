@@ -34,9 +34,9 @@ def classification_train_step(model, batch, loss_fn, device, optimizer, history,
 
 
 def regression_train_step(model, batch, device, optimizer, history, scheduler=None, clip=None):
-    gc.collect()
-    torch.cuda.empty_cache()
-    
+    # gc.collect()
+    # torch.cuda.empty_cache()
+
     model.zero_grad()
     model.train()
 
