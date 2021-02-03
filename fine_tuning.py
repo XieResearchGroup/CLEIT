@@ -211,8 +211,8 @@ def fine_tune_encoder_new(encoder, train_dataloader, val_dataloader, seed, task_
             except IndexError:
                 gu_flag = False
 
-    target_regressor.load_state_dict(
-        torch.load(os.path.join(task_save_folder, f'target_regressor_{seed}.pt')))
+    torch.save(target_regressor.state_dict(),
+               os.path.join(task_save_folder, f'target_regressor_{seed}.pt'))
 
     return target_regressor, (target_regression_train_history, target_regression_eval_train_history,
                               target_regression_eval_val_history, target_regression_eval_test_history)
