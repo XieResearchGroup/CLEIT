@@ -3,23 +3,24 @@ from types_ import *
 from typing import List
 import torch
 from itertools import chain
+from masked_linear import MaskedLinear
 
-def zero_grad(self, grad_input, grad_output):
-    return grad_input * self.mask
-
-class MaskedLinear(nn.Module):
-    def __init__(self, in_features, out_features, num_of_modules):
-        super(MaskedLinear, self).__init__()
-        self.linear = nn.Linear(in_features * num_of_modules, out_features * num_of_modules)
-        self.mask = torch.block_diag(*chain([torch.ones(out_features, in_features)] * num_of_modules))
-        self.linear.weight.data *= self.mask  # to zero it out first
-        with torch.no_grad():
-            self.linear.weight.mul_(self.mask)
-
-        #self.handle = self.register_backward_hook(zero_grad)
-
-    def forward(self, input):
-        return self.linear(input)
+# def zero_grad(self, grad_input, grad_output):
+#     return grad_input * self.mask
+#
+# class MaskedLinear(nn.Module):
+#     def __init__(self, in_features, out_features, num_of_modules):
+#         super(MaskedLinear, self).__init__()
+#         self.linear = nn.Linear(in_features * num_of_modules, out_features * num_of_modules)
+#         self.mask = torch.block_diag(*chain([torch.ones(out_features, in_features)] * num_of_modules))
+#         self.linear.weight.data *= self.mask  # to zero it out first
+#         with torch.no_grad():
+#             self.linear.weight.mul_(self.mask)
+#
+#         #self.handle = self.register_backward_hook(zero_grad)
+#
+#     def forward(self, input):
+#         return self.linear(input)
 
 class MaskMLP(nn.Module):
 
