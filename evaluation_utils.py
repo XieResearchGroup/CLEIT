@@ -89,22 +89,22 @@ def evaluate_target_regression_epoch(regressor, dataloader, device, history):
     assert (y_truths.shape == y_preds.shape)
     history['dpearsonr'].append(np.mean([pearsonr(y_truths[:, i][~ma.masked_invalid(y_truths[:, i]).mask],
                                                   y_preds[:, i][~ma.masked_invalid(y_truths[:, i]).mask])[0] for i in
-                                         range(y_truths.shape[1])]))
+                                         range(y_truths.shape[1])]).item())
     history['cpearsonr'].append(np.mean([pearsonr(y_truths[i, :][~ma.masked_invalid(y_truths[i, :]).mask],
                                                   y_preds[i, :][~ma.masked_invalid(y_truths[i, :]).mask])[0] for i in
-                                         range(y_truths.shape[0])]))
+                                         range(y_truths.shape[0])]).item())
     history['dspearmanr'].append(np.mean([spearmanr(y_truths[:, i][~ma.masked_invalid(y_truths[:, i]).mask],
                                                     y_preds[:, i][~ma.masked_invalid(y_truths[:, i]).mask])[0] for i in
-                                          range(y_truths.shape[1])]))
+                                          range(y_truths.shape[1])]).item())
     history['cspearmanr'].append(np.mean([spearmanr(y_truths[i, :][~ma.masked_invalid(y_truths[i, :]).mask],
                                                     y_preds[i, :][~ma.masked_invalid(y_truths[i, :]).mask])[0] for i in
-                                          range(y_truths.shape[0])]))
+                                          range(y_truths.shape[0])]).item())
     history['drmse'].append(np.mean([mean_squared_error(y_truths[:, i][~ma.masked_invalid(y_truths[:, i]).mask],
                                                         y_preds[:, i][~ma.masked_invalid(y_truths[:, i]).mask],
-                                                        squared=False) for i in range(y_truths.shape[1])]))
+                                                        squared=False) for i in range(y_truths.shape[1])]).item())
     history['crmse'].append(np.mean([mean_squared_error(y_truths[i, :][~ma.masked_invalid(y_truths[i, :]).mask],
                                                         y_preds[i, :][~ma.masked_invalid(y_truths[i, :]).mask],
-                                                        squared=False) for i in range(y_truths.shape[0])]))
+                                                        squared=False) for i in range(y_truths.shape[0])]).item())
 
     # history['pearsonr'].append(pearsonr(y_truths, y_preds)[0])
     # history['spearmanr'].append(spearmanr(y_truths, y_preds)[0])
