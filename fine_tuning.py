@@ -38,7 +38,8 @@ def regression_train_step(model, batch, device, optimizer, history, scheduler=No
 
     x = batch[0].to(device)
     y = batch[1].to(device)
-    loss = F.mse_loss(model(x).view(-1), y) - torch.square(torch.sum(y - model(x).view(-1))) / y.shape[-1] ** 2
+    mask = torch.isnan(y)
+    loss = F.mse_loss(model(x)[~mask], y[~mask]) - torch.square(torch.sum(y[~mask] - model(x)[~mask])) / (y.shape[0] * y.shape[-1] ** 2)
 
     optimizer.zero_grad()
     loss.backward()
