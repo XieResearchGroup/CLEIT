@@ -159,7 +159,7 @@ if __name__ == '__main__':
     parser.add_argument('--method', dest='method', nargs='?', default='coral',
                         choices=['cleit', 'cleita', 'cleitm', 'dsn', 'dcc', 'dann', 'coral', 'adda'])
     # parser.add_argument('--drug', dest='drug', nargs='?', default='gem', choices=['gem', 'fu', 'cis', 'tem'])
-    parser.add_argument('--metric', dest='metric', nargs='?', default='pearsonr', choices=['pearsonr', 'rmse'])
+    parser.add_argument('--metric', dest='metric', nargs='?', default='cpearsonr', choices=['cpearsonr', 'dpearsonr'])
     parser.add_argument('--measurement', dest='measurement', nargs='?', default='AUC', choices=['AUC', 'LN_IC50'])
     parser.add_argument('--n', dest='n', nargs='?', type=int, default=5)
 
