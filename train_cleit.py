@@ -40,6 +40,12 @@ def train_vae(dataloader, **kwargs):
                       hidden_dims=kwargs['encoder_hidden_dims'],
                       dop=kwargs['dop']).to(kwargs['device'])
 
+    # get reference encoder
+
+
+    # construct transmitter
+
+
     ae_eval_train_history = defaultdict(list)
     ae_eval_test_history = defaultdict(list)
 

@@ -71,8 +71,10 @@ def main(args, update_params_dict):
         training_params = json.load(f)
 
     training_params['unlabeled'].update(update_params_dict)
-    param_str = dict_to_str(update_params_dict)
+    #patching
+    training_params['labeled']['train_num_epochs'] = update_params_dict['ftrain_num_epochs']
 
+    param_str = dict_to_str(update_params_dict)
     training_params.update(
         {
             'device': device,
@@ -80,7 +82,7 @@ def main(args, update_params_dict):
             'es_flag': False,
             'retrain_flag': args.retrain_flag
         })
-    task_save_folder = os.path.join('model_save', 'vae', args.omics, param_str, args.drug)
+    task_save_folder = os.path.join('model_save', 'vae', args.omics, param_str)
     safe_make_dir(training_params['model_save_folder'])
     safe_make_dir(task_save_folder)
 
@@ -91,6 +93,7 @@ def main(args, update_params_dict):
     training_params.update(
         {
             'input_dim': data_provider.shape_dict[args.omics],
+            'output_dim': data_provider.shape_dict['target']
         }
     )
     # start unlabeled training
@@ -108,12 +111,12 @@ def main(args, update_params_dict):
 
     ft_evaluation_metrics = defaultdict(list)
     if args.omics == 'gex':
-        labeled_dataloader_generator = data_provider.get_drug_labeled_gex_dataloader(drug=args.drug)
+        labeled_dataloader_generator = data_provider.get_drug_labeled_gex_dataloader()
         fold_count = 0
         for train_labeled_dataloader, val_labeled_dataloader in labeled_dataloader_generator:
             ft_encoder = deepcopy(encoder)
 
-            target_classifier, ft_historys = fine_tuning.fine_tune_encoder(
+            target_classifier, ft_historys = fine_tuning.fine_tune_encoder_new(
                 encoder=ft_encoder,
                 train_dataloader=train_labeled_dataloader,
                 val_dataloader=val_labeled_dataloader,
@@ -124,18 +127,18 @@ def main(args, update_params_dict):
                 **wrap_training_params(training_params, type='labeled')
             )
 
-            for metric in ['pearsonr', 'spearmanr', 'r2', 'rmse']:
-                ft_evaluation_metrics[metric].append(ft_historys[-1][metric][ft_historys[-2]['best_index']])
+            for metric in ['dpearsonr', 'dpearmanr', 'drmse','cpearsonr', 'cpearmanr', 'crmse']:
+                ft_evaluation_metrics[metric].append(ft_historys[-1][metric][-1])
             fold_count += 1
     else:
-        labeled_dataloader_generator = data_provider.get_drug_labeled_mut_dataloader(drug=args.drug)
+        labeled_dataloader_generator = data_provider.get_drug_labeled_mut_dataloader()
         fold_count = 0
         test_ft_evaluation_metrics = defaultdict(list)
 
         for train_labeled_dataloader, val_labeled_dataloader, test_labeled_dataloader in labeled_dataloader_generator:
             ft_encoder = deepcopy(encoder)
 
-            target_classifier, ft_historys = fine_tuning.fine_tune_encoder(
+            target_classifier, ft_historys = fine_tuning.fine_tune_encoder_new(
                 encoder=ft_encoder,
                 train_dataloader=train_labeled_dataloader,
                 val_dataloader=val_labeled_dataloader,
@@ -145,9 +148,9 @@ def main(args, update_params_dict):
                 task_save_folder=task_save_folder,
                 **wrap_training_params(training_params, type='labeled')
             )
-            for metric in ['pearsonr', 'spearmanr', 'r2', 'rmse']:
-                ft_evaluation_metrics[metric].append(ft_historys[-2][metric][ft_historys[-2]['best_index']])
-                test_ft_evaluation_metrics[metric].append(ft_historys[-1][metric][ft_historys[-2]['best_index']])
+            for metric in ['dpearsonr', 'dpearmanr', 'drmse','cpearsonr', 'cpearmanr', 'crmse']:
+                ft_evaluation_metrics[metric].append(ft_historys[-2][metric][-1])
+                test_ft_evaluation_metrics[metric].append(ft_historys[-1][metric][-1])
             fold_count += 1
         with open(os.path.join(task_save_folder, f'{param_str}_test_ft_evaluation_results.json'), 'w') as f:
             json.dump(test_ft_evaluation_metrics, f)
@@ -159,7 +162,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser('CLEIT training and evaluation')
     parser.add_argument('--omics', dest='omics', nargs='?', default='gex',
                         choices=['gex', 'mut'])
-    parser.add_argument('--drug', dest='drug', nargs='?', default='gem', choices=['gem', 'fu', 'cis', 'tem'])
+    # parser.add_argument('--drug', dest='drug', nargs='?', default='gem', choices=['gem', 'fu', 'cis', 'tem'])
     parser.add_argument('--metric', dest='metric', nargs='?', default='pearsonr', choices=['pearsonr', 'rmse'])
     parser.add_argument('--measurement', dest='measurement', nargs='?', default='AUC', choices=['AUC', 'LN_IC50'])
     parser.add_argument('--n', dest='n', nargs='?', type=int, default=5)
@@ -174,12 +177,9 @@ if __name__ == '__main__':
     params_grid = {
         #"pretrain_num_epochs": [0, 50, 100, 200, 300],
         "train_num_epochs": [100, 200, 300, 500, 750, 1000, 1500, 2000, 2500, 3000, 4000, 5000],
-        "dop": [0.0, 0.1, 0.2]
-        #"train_num_epochs": [100]
+        "dop": [0.0, 0.1],
+        "ftrain_num_epochs": [100, 200, 300, 500, 750, 1000]
     }
-
-    # if args.method not in ['adsn', 'adae', 'dsnw']:
-    #     params_grid.pop('pretrain_num_epochs')
 
     keys, values = zip(*params_grid.items())
     update_params_dict_list = [dict(zip(keys, v)) for v in itertools.product(*values)]

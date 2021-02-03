@@ -105,7 +105,7 @@ def main(args, update_params_dict):
             'es_flag': False,
             'retrain_flag': args.retrain_flag
         })
-    task_save_folder = os.path.join('model_save', args.method, args.measurement, args.drug)
+    task_save_folder = os.path.join('model_save', args.method, args.measurement)
 
     safe_make_dir(training_params['model_save_folder'])
     safe_make_dir(task_save_folder)
@@ -115,6 +115,7 @@ def main(args, update_params_dict):
     training_params.update(
         {
             'input_dim': data_provider.shape_dict['gex'],
+            'output_dim': data_provider.shape_dict['target']
         }
     )
 
@@ -128,7 +129,7 @@ def main(args, update_params_dict):
               'wb') as f:
         for history in historys:
             pickle.dump(dict(history), f)
-    labeled_dataloader_generator = data_provider.get_drug_labeled_mut_dataloader(drug=args.drug)
+    labeled_dataloader_generator = data_provider.get_drug_labeled_mut_dataloader()
     ft_evaluation_metrics = defaultdict(list)
     test_ft_evaluation_metrics = defaultdict(list)
     fold_count = 0
@@ -157,7 +158,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser('CLEIT training and evaluation')
     parser.add_argument('--method', dest='method', nargs='?', default='coral',
                         choices=['cleit', 'cleita', 'cleitm', 'dsn', 'dcc', 'dann', 'coral', 'adda'])
-    parser.add_argument('--drug', dest='drug', nargs='?', default='gem', choices=['gem', 'fu', 'cis', 'tem'])
+    # parser.add_argument('--drug', dest='drug', nargs='?', default='gem', choices=['gem', 'fu', 'cis', 'tem'])
     parser.add_argument('--metric', dest='metric', nargs='?', default='pearsonr', choices=['pearsonr', 'rmse'])
     parser.add_argument('--measurement', dest='measurement', nargs='?', default='AUC', choices=['AUC', 'LN_IC50'])
     parser.add_argument('--n', dest='n', nargs='?', type=int, default=5)
@@ -172,7 +173,7 @@ if __name__ == '__main__':
     params_grid = {
         #"pretrain_num_epochs": [0, 50, 100, 200, 300],
         "train_num_epochs": [100, 200, 300, 500, 750, 1000, 1500, 2000, 2500, 3000, 4000, 5000],
-        "dop": [0.0, 0.1, 0.2]
+        "dop": [0.0, 0.1, 0.2],
         #"train_num_epochs": [100]
     }
 

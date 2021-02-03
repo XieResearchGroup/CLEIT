@@ -33,7 +33,7 @@ ccle_sample_file = os.path.join(ccle_folder, 'sample_info.csv')
 gdsc_folder = os.path.join(raw_data_folder, 'GDSC')
 gdsc_target_file1 = os.path.join(gdsc_folder, 'GDSC1_fitted_dose_response_25Feb20.csv')
 gdsc_target_file2 = os.path.join(gdsc_folder, 'GDSC2_fitted_dose_response_25Feb20.csv')
-#gdsc_target_file = os.path.join(gdsc_folder, 'gdsc_drug_sensitivity.csv')
+gdsc_target_file = os.path.join(gdsc_folder, 'sanger-dose-response.csv')
 gdsc_sample_file = os.path.join(gdsc_folder, 'gdsc_cell_line_annotation.csv')
 gdsc_preprocessed_target_file = os.path.join(preprocessed_data_folder, 'gdsc_target')
 
