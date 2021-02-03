@@ -8,6 +8,7 @@ from torch.nn import functional as F
 from loss_and_metrics import masked_mse
 import os
 import torch
+import gc
 
 
 def classification_train_step(model, batch, loss_fn, device, optimizer, history, scheduler=None, clip=None):
@@ -33,6 +34,9 @@ def classification_train_step(model, batch, loss_fn, device, optimizer, history,
 
 
 def regression_train_step(model, batch, device, optimizer, history, scheduler=None, clip=None):
+    gc.collect()
+    torch.cuda.empty_cache()
+    
     model.zero_grad()
     model.train()
 
