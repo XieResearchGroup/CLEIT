@@ -13,7 +13,10 @@ class MaskedLinear(nn.Module):
         self.linear = nn.Linear(in_features * num_of_modules, out_features * num_of_modules)
         self.mask = torch.block_diag(*chain([torch.ones(out_features, in_features)] * num_of_modules))
         self.linear.weight.data *= self.mask  # to zero it out first
-        self.handle = self.register_backward_hook(zero_grad)
+        with torch.no_grad():
+            self.linear.weight.mul_(self.mask)
+
+        #self.handle = self.register_backward_hook(zero_grad)
 
     def forward(self, input):
         return self.linear(input)

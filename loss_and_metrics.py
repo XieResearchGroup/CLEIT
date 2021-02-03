@@ -1,6 +1,22 @@
 import torch
+import numpy as np
 from torch.autograd import Variable
 from functools import partial
+
+
+def masked_mse(preds, labels, null_val=np.nan):
+
+    if np.isnan(null_val):
+        mask = ~torch.isnan(labels)
+    else:
+        mask = torch.ne(labels, null_val)
+    mask = mask.to(torch.float32)
+    mask /= torch.mean(mask)
+    mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
+    loss = torch.pow(preds - labels, 2)
+    loss = loss * mask
+    loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
+    return torch.mean(loss)
 
 
 def cov(m, rowvar=False):

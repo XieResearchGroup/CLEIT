@@ -5,7 +5,7 @@ from mlp import MLP
 from mask_mlp import MaskMLP
 from encoder_decoder import EncoderDecoder
 from torch.nn import functional as F
-
+from loss_and_metrics import masked_mse
 import os
 import torch
 
@@ -47,12 +47,17 @@ def regression_train_step(model, batch, device, optimizer, history, scheduler=No
         (~torch.isnan(y[i, :])).sum())
                         for i in range(y.shape[0])])
 
-    loss = (mse_loss - penalty_term) / y.shape[0]
-
+    loss = (mse_loss-penalty_term) / y.shape[0]
+    #loss = masked_mse(preds=model(x), labels=y)
     optimizer.zero_grad()
     loss.backward()
     if clip is not None:
         torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
+    with torch.no_grad():
+        mask_module_indices = [i for i in range(len(list(model.decoder.modules())))
+                               if str(list(model.decoder.modules())[i]).startswith('MaskedLinear')]
+        for index in mask_module_indices:
+            list(model.decoder.modules())[index].linear.weight.grad.mul_(list(model.decoder.modules())[index].mask)
 
     optimizer.step()
     if scheduler is not None:
