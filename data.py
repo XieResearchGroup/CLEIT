@@ -190,9 +190,12 @@ class DataProvider:
 
         mut_target_df = self.target_df.loc[mut_labeled_samples]
         mut_labeled_samples = mut_labeled_samples[mut_target_df.shape[1] - mut_target_df.isna().sum(axis=1) >= 2]
+        mut_target_df = self.target_df.loc[mut_labeled_samples]
 
         mut_only_target_df = self.target_df.loc[mut_only_labeled_samples]
-        mut_only_labeled_samples = mut_only_labeled_samples[mut_only_target_df.shape[1] - mut_only_target_df.isna().sum(axis=1) >= 2]
+        mut_only_labeled_samples = mut_only_labeled_samples[
+            mut_only_target_df.shape[1] - mut_only_target_df.isna().sum(axis=1) >= 2]
+        mut_only_target_df = self.target_df.loc[mut_only_labeled_samples]
 
         sample_label_vec = (mut_target_df.isna().sum(axis=1) <= mut_target_df.isna().sum(axis=1).median()).astype('int')
 
