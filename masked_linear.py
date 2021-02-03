@@ -64,7 +64,7 @@ class MaskedLinear(nn.Module):
             flg of bias.
         """
         super(MaskedLinear, self).__init__()
-        mask = torch.block_diag(*chain([torch.ones(out_features, in_features)] * num_of_modules))
+        mask = torch.block_diag(*chain([torch.ones(in_features, out_features)] * num_of_modules))
         self.input_features = mask.shape[0]
         self.output_features = mask.shape[1]
         if isinstance(mask, torch.Tensor):
