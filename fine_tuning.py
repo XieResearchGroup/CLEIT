@@ -38,14 +38,14 @@ def regression_train_step(model, batch, device, optimizer, history, scheduler=No
 
     x = batch[0].to(device)
     y = batch[1].to(device)
-    mse_loss = sum([F.mse_loss(
-        y[i, :].masked_select(mask=~torch.isnan(y[i, :])),
-        model(x)[i, :].masked_select(mask=~torch.isnan(y[i, :])))
-        for i in range(y.shape[0])])
+    mse_loss = sum([F.mse_loss(torch.where(torch.isnan(y[i, :]), torch.zeros_like(y[i, :]), y[i, :]),
+                               torch.where(torch.isnan(y[i, :]), torch.zeros_like(y[i, :]), model(x)[i, :]))
+                    for i in range(y.shape[0])])
     penalty_term = sum([torch.square(torch.sum(
-        y[i, :].masked_select(mask=~torch.isnan(y[i, :])) -
-        model(x)[i, :].masked_select(mask=~torch.isnan(y[i, :]))))/torch.square(~torch.isnan(y[i, :]).sum())
-        for i in range(y.shape[0])])
+        torch.where(torch.isnan(y[i, :]), torch.zeros_like(y[i, :]), y[i, :]) -
+        torch.where(torch.isnan(y[i, :]), torch.zeros_like(y[i, :]), model(x)[i, :]))) / torch.square(
+        (~torch.isnan(y[i, :])).sum())
+                        for i in range(y.shape[0])])
 
     loss = (mse_loss - penalty_term) / y.shape[0]
 
