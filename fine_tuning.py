@@ -155,7 +155,7 @@ def fine_tune_encoder(encoder, train_dataloader, val_dataloader, seed, task_save
 def fine_tune_encoder_new(encoder, train_dataloader, val_dataloader, seed, task_save_folder, test_dataloader=None,
                           metric_name='dpearsonr',
                           normalize_flag=False, **kwargs):
-    target_decoder = MaskMLP(input_dim=kwargs['latent_dim'],
+    target_decoder = MLP(input_dim=kwargs['latent_dim'],
                              output_dim=kwargs['output_dim'],
                              hidden_dims=kwargs['regressor_hidden_dims']).to(kwargs['device'])
 
