@@ -74,7 +74,9 @@ def main(args, update_params_dict):
     #patching
     training_params['labeled']['train_num_epochs'] = update_params_dict['ftrain_num_epochs']
 
+    f_epoch = update_params_dict.pop('ftrain_num_epochs')
     param_str = dict_to_str(update_params_dict)
+
     training_params.update(
         {
             'device': device,
@@ -82,7 +84,7 @@ def main(args, update_params_dict):
             'es_flag': False,
             'retrain_flag': args.retrain_flag
         })
-    task_save_folder = os.path.join('model_save', 'vae', args.omics, param_str)
+    task_save_folder = os.path.join('model_save', 'vae', args.omics, param_str, f'ftrain_num_epochs_{f_epoch}')
     safe_make_dir(training_params['model_save_folder'])
     safe_make_dir(task_save_folder)
 
@@ -90,6 +92,11 @@ def main(args, update_params_dict):
 
     data_provider = DataProvider(batch_size=training_params['unlabeled']['batch_size'],
                                  target=args.measurement)
+    if "vae.pt" in os.listdir(training_params['training_params']):
+        training_params.update(
+            {'retrain_flag': False}
+        )
+
     training_params.update(
         {
             'input_dim': data_provider.shape_dict[args.omics],
