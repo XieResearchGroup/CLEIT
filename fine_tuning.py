@@ -78,7 +78,7 @@ def fine_tune_encoder(encoder, train_dataloader, val_dataloader, seed, task_save
     # target_decoder = MLP(input_dim=kwargs['latent_dim'],
     #                      output_dim=1,
     #                      hidden_dims=kwargs['regressor_hidden_dims']).to(kwargs['device'])
-    target_decoder = MaskMLP(input_dim=kwargs['latent_dim'],
+    target_decoder = MLP(input_dim=kwargs['latent_dim'],
                              output_dim=kwargs['output_dim'],
                              hidden_dims=kwargs['regressor_hidden_dims']).to(kwargs['device'])
 
