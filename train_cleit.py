@@ -32,7 +32,7 @@ def cleit_train_step(ae, reference_encoder, batch, device, optimizer, history, s
 
     for k, v in loss_dict.items():
         history[k].append(v)
-
+    history['code_loss'].append(code_loss.item())
     return history
 
 
@@ -55,7 +55,7 @@ def train_cleit(dataloader, **kwargs):
                       latent_dim=kwargs['latent_dim'],
                       hidden_dims=kwargs['encoder_hidden_dims'],
                       dop=kwargs['dop']).to(kwargs['device'])
-    
+
     aux_ae.encoder.load_state_dict(torch.load(os.path.join('./model_save', 'reference_encoder.pt')))
     reference_encoder = aux_ae.encoder
 
