@@ -2,8 +2,6 @@ import torch
 import os
 from collections import defaultdict
 from vae import VAE
-from mask_mlp import MaskMLP
-from encoder_decoder import EncoderDecoder
 from loss_and_metrics import contrastive_loss
 
 
