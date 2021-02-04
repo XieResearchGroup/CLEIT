@@ -103,7 +103,7 @@ def gan_gen_train_step(critic, ae, transmitter, batch, device, optimizer, alpha,
     return history
 
 
-def train_adda(dataloader, **kwargs):
+def train_cleita(dataloader, **kwargs):
     autoencoder = VAE(input_dim=kwargs['input_dim'],
                       latent_dim=kwargs['latent_dim'],
                       hidden_dims=kwargs['encoder_hidden_dims'],

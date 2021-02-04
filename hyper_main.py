@@ -17,6 +17,7 @@ import train_adda
 import train_cleit
 import train_cleitm
 import train_cleita
+import train_cleitc
 import fine_tuning
 from copy import deepcopy
 
@@ -71,9 +72,11 @@ def dict_to_str(d):
 
 def main(args, update_params_dict):
     if args.method == 'cleitm':
-        raise NotImplementedError
+        train_fn = train_cleitm.train_cleitm
     elif args.method == 'cleita':
-        raise NotImplementedError
+        train_fn = train_cleita.train_cleita
+    elif args.method == 'cleitc':
+        train_fn = train_cleitc.train_cleitc
     elif args.method == 'coral':
         train_fn = train_coral.train_coral
     elif args.method == 'dsn':
@@ -85,8 +88,7 @@ def main(args, update_params_dict):
     elif args.method == 'dcc':
         train_fn = train_dcc.train_dcc
     else:
-        raise NotImplementedError
-
+        train_fn = train_cleit.train_cleit
     # normalize_flag = args.method in ['adsn', 'mdsn', 'ndsn']
     # normalize_flag = False
 
@@ -122,9 +124,14 @@ def main(args, update_params_dict):
     random.seed(2020)
 
     # start unlabeled training
-    encoder, historys = train_fn(s_dataloaders=data_provider.get_unlabeld_mut_dataloader(match=True),
-                                 t_dataloaders=data_provider.get_unlabeled_gex_dataloader(),
-                                 **wrap_training_params(training_params, type='unlabeled'))
+    if 'cleit' not in args.method:
+        encoder, historys = train_fn(s_dataloaders=data_provider.get_unlabeld_mut_dataloader(match=True),
+                                     t_dataloaders=data_provider.get_unlabeled_gex_dataloader(),
+                                     **wrap_training_params(training_params, type='unlabeled'))
+    else:
+        encoder, historys = train_fn(dataloader=data_provider.get_unlabeld_mut_dataloader(match=True),
+                                     **wrap_training_params(training_params, type='unlabeled'))
+
     with open(os.path.join(training_params['model_save_folder'], f'unlabel_train_history.pickle'),
               'wb') as f:
         for history in historys:
@@ -136,14 +143,14 @@ def main(args, update_params_dict):
     for train_labeled_dataloader, val_labeled_dataloader, test_labeled_dataloader in labeled_dataloader_generator:
         ft_encoder = deepcopy(encoder)
         target_classifier, ft_historys = fine_tuning.fine_tune_encoder(
-                encoder=ft_encoder,
-                train_dataloader=train_labeled_dataloader,
-                val_dataloader=val_labeled_dataloader,
-                test_dataloader=test_labeled_dataloader,
-                seed=fold_count,
-                metric_name=args.metric,
-                task_save_folder=task_save_folder,
-                **wrap_training_params(training_params, type='labeled')
+            encoder=ft_encoder,
+            train_dataloader=train_labeled_dataloader,
+            val_dataloader=val_labeled_dataloader,
+            test_dataloader=test_labeled_dataloader,
+            seed=fold_count,
+            metric_name=args.metric,
+            task_save_folder=task_save_folder,
+            **wrap_training_params(training_params, type='labeled')
         )
         for metric in ['dpearsonr', 'drmse', 'cpearsonr', 'crmse']:
             ft_evaluation_metrics[metric].append(ft_historys[-2][metric][ft_historys[-2]['best_index']])
@@ -154,10 +161,11 @@ def main(args, update_params_dict):
     with open(os.path.join(task_save_folder, f'{param_str}_ft_evaluation_results.json'), 'w') as f:
         json.dump(ft_evaluation_metrics, f)
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('CLEIT training and evaluation')
-    parser.add_argument('--method', dest='method', nargs='?', default='coral',
-                        choices=['cleit', 'cleita', 'cleitm', 'dsn', 'dcc', 'dann', 'coral', 'adda'])
+    parser.add_argument('--method', dest='method', nargs='?', default='cleit',
+                        choices=['cleit', 'cleitc', 'cleita', 'cleitm', 'dsn', 'dcc', 'dann', 'coral', 'adda'])
     # parser.add_argument('--drug', dest='drug', nargs='?', default='gem', choices=['gem', 'fu', 'cis', 'tem'])
     parser.add_argument('--metric', dest='metric', nargs='?', default='cpearsonr', choices=['cpearsonr', 'dpearsonr'])
     parser.add_argument('--measurement', dest='measurement', nargs='?', default='AUC', choices=['AUC', 'LN_IC50'])
@@ -171,10 +179,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     params_grid = {
-        #"pretrain_num_epochs": [0, 50, 100, 200, 300],
+        # "pretrain_num_epochs": [0, 50, 100, 200, 300],
         "train_num_epochs": [100, 300, 500, 1000, 2000, 3000, 5000],
         "dop": [0.0, 0.1],
-        #"train_num_epochs": [100]
+        # "train_num_epochs": [100]
     }
 
     # if args.method not in ['adsn', 'adae', 'dsnw']:
