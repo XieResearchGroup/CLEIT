@@ -5,7 +5,7 @@ from itertools import chain
 from vae import VAE
 from mlp import MLP
 from loss_and_metrics import mmd_loss
-
+from encoder_decoder import EncoderDecoder
 
 def cleit_train_step(ae, reference_encoder, transmitter, batch, device, optimizer, history, scheduler=None):
     ae.zero_grad()
@@ -88,10 +88,15 @@ def train_cleitm(dataloader, **kwargs):
                                                          optimizer=cleit_optimizer,
                                                          history=ae_eval_train_history)
         torch.save(autoencoder.state_dict(), os.path.join(kwargs['model_save_folder'], 'cleit_vae.pt'))
+        torch.save(transmitter.state_dict(), os.path.join(kwargs['model_save_folder'], 'transmitter.pt'))
     else:
         try:
             autoencoder.load_state_dict(torch.load(os.path.join(kwargs['model_save_folder'], 'cleit_vae.pt')))
+            transmitter.load_state_dict(torch.load(os.path.join(kwargs['model_save_folder'], 'transmitter.pt')))
         except FileNotFoundError:
             raise Exception("No pre-trained encoder")
 
-    return autoencoder.encoder, (ae_eval_train_history, ae_eval_test_history)
+    encoder = EncoderDecoder(encoder=autoencoder.encoder,
+                             decoder=transmitter).to(kwargs['device'])
+
+    return encoder, (ae_eval_train_history, ae_eval_test_history)

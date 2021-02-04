@@ -6,6 +6,7 @@ from itertools import chain
 from vae import VAE
 from evaluation_utils import *
 from mlp import MLP
+from encoder_decoder import EncoderDecoder
 
 
 def compute_gradient_penalty(critic, real_samples, fake_samples, device):
@@ -165,10 +166,15 @@ def train_cleita(dataloader, **kwargs):
                                                                history=gen_train_history)
 
         torch.save(autoencoder.state_dict(), os.path.join(kwargs['model_save_folder'], 'cleit_vae.pt'))
+        torch.save(transmitter.state_dict(), os.path.join(kwargs['model_save_folder'], 'transmitter.pt'))
     else:
         try:
             autoencoder.load_state_dict(torch.load(os.path.join(kwargs['model_save_folder'], 'cleit_vae.pt')))
+            transmitter.load_state_dict(torch.load(os.path.join(kwargs['model_save_folder'], 'transmitter.pt')))
         except FileNotFoundError:
             raise Exception("No pre-trained encoder")
 
-    return autoencoder.encoder, (ae_train_history, ae_val_history, critic_train_history, gen_train_history)
+    encoder = EncoderDecoder(encoder=autoencoder.encoder,
+                             decoder=transmitter).to(kwargs['device'])
+
+    return encoder, (ae_train_history, ae_val_history, critic_train_history, gen_train_history)
