@@ -46,7 +46,7 @@ def train_cleitc(dataloader, **kwargs):
     :param kwargs:
     :return:
     """
-
+    print(kwargs)
     autoencoder = VAE(input_dim=kwargs['input_dim'],
                       latent_dim=kwargs['latent_dim'],
                       hidden_dims=kwargs['encoder_hidden_dims'],
@@ -57,7 +57,6 @@ def train_cleitc(dataloader, **kwargs):
                  latent_dim=kwargs['latent_dim'],
                  hidden_dims=kwargs['encoder_hidden_dims'],
                  dop=kwargs['dop']).to(kwargs['device'])
-    print(aux_ae)
     aux_ae.encoder.load_state_dict(torch.load(os.path.join('./model_save', 'reference_encoder.pt')))
     reference_encoder = aux_ae.encoder
 
