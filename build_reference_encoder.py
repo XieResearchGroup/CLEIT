@@ -60,7 +60,7 @@ def build_encoder(args):
                                  target=args.measurement)
     training_params.update(
         {
-            'input_dim': data_provider.shape_dict['gem'],
+            'input_dim': data_provider.shape_dict['gex'],
             'output_dim': data_provider.shape_dict['target']
         }
     )
