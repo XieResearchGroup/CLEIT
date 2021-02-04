@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from torch.autograd import Variable
 from functools import partial
+import torch.nn.functional as F
 
 
 def masked_mse(preds, labels, null_val=np.nan):
@@ -127,3 +128,20 @@ def mmd_loss(source_features, target_features, device):
     loss_value = loss_value
 
     return loss_value
+
+
+def compute_cosine_distances_matrix(x, y):
+    normalize_x = F.normalize(x, p=2, dim=1)
+    normalize_y = F.normalize(y, p=2, dim=1)
+    sim_matrix = torch.matmul(normalize_x, normalize_y.transpose(0,1))
+    return sim_matrix
+
+
+def contrastive_loss(y_true, y_pred):
+    sim_matrix = compute_cosine_distances_matrix(y_true, y_pred)
+    denominator = torch.sum(torch.mul(torch.exp(sim_matrix), -1 * (
+            torch.eye(n=sim_matrix.shape[0], dtype=torch.float32) - 1)), dim=0) + torch.sum(torch.mul(torch.exp(sim_matrix), -1 * (
+                          torch.eye(n=sim_matrix.shape[0], dtype=torch.float32) - 1)), dim=1)
+    nominator = torch.sum(torch.mul(torch.exp(sim_matrix), torch.eye(n=sim_matrix.shape[0], dtype=torch.float32)), dim=0)
+
+    return -torch.mean(torch.log(nominator) - torch.log(denominator))

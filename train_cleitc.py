@@ -1,16 +1,17 @@
 import torch
 import os
+from evaluation_utils import eval_ae_epoch, model_save_check
 from collections import defaultdict
 from vae import VAE
-from mask_mlp import MaskMLP
-from encoder_decoder import EncoderDecoder
+from mlp import MLP
 from loss_and_metrics import contrastive_loss
 
-
-def cleit_train_step(ae, reference_encoder, batch, device, optimizer, history, scheduler=None):
+def cleit_train_step(ae, reference_encoder, transmitter, batch, device, optimizer, history, scheduler=None):
     ae.zero_grad()
     reference_encoder.zero_grad()
+    transmitter.zero_grad()
     ae.train()
+    transmitter.train()
     reference_encoder.eval()
 
     x_m = batch[0].to(device)
@@ -21,7 +22,7 @@ def cleit_train_step(ae, reference_encoder, batch, device, optimizer, history, s
     x_m_code = ae.encoder(x_m)
     x_g_code = reference_encoder(x_g)
 
-    code_loss = contrastive_loss(y_true=x_g_code, y_pred=x_m_code)
+    code_loss = contrastive_loss(y_true=x_g_code, y_pred=transmitter(x_m_code))
     loss = loss_dict['loss'] + code_loss
     optimizer.zero_grad()
 
@@ -51,14 +52,13 @@ def train_cleit(dataloader, **kwargs):
                       dop=kwargs['dop']).to(kwargs['device'])
 
     # get reference encoder
-    target_decoder = MaskMLP(input_dim=kwargs['latent_dim'],
-                             output_dim=kwargs['output_dim'],
-                             hidden_dims=kwargs['regressor_hidden_dims']).to(kwargs['device'])
-    target_regressor = EncoderDecoder(encoder=autoencoder.encoder,
-                                      decoder=target_decoder).to(kwargs['device'])
-    target_regressor.load_state_dict(torch.load(os.path.join('./model_save', 'target_regressor.pt')))
+    reference_encoder = None
 
-    reference_encoder = target_regressor.encoder
+    # construct transmitter
+    transmitter = MLP(input_dim=kwargs['latent_dim'],
+                      output_dim=kwargs['latent_dim'],
+                      hidden_dims=[kwargs['latent_dim']]).to(kwargs['device'])
+
 
     ae_eval_train_history = defaultdict(list)
     ae_eval_test_history = defaultdict(list)
@@ -70,17 +70,17 @@ def train_cleit(dataloader, **kwargs):
             if epoch % 50 == 0:
                 print(f'----Autoencoder Training Epoch {epoch} ----')
             for step, batch in enumerate(dataloader):
-                ae_eval_train_history = cleit_train_step(ae=autoencoder,
-                                                         reference_encoder=reference_encoder,
-                                                         batch=batch,
-                                                         device=kwargs['device'],
-                                                         optimizer=ae_optimizer,
-                                                         history=ae_eval_train_history)
-        torch.save(autoencoder.state_dict(), os.path.join(kwargs['model_save_folder'], 'cleit_vae.pt'))
+                ae_eval_train_history = ae_train_step(ae=autoencoder,
+                                                      batch=batch,
+                                                      device=kwargs['device'],
+                                                      optimizer=ae_optimizer,
+                                                      history=ae_eval_train_history)
+        torch.save(autoencoder.state_dict(), os.path.join(kwargs['model_save_folder'], 'vae.pt'))
     else:
         try:
-            autoencoder.load_state_dict(torch.load(os.path.join(kwargs['model_save_folder'], 'cleit_vae.pt')))
+            autoencoder.load_state_dict(torch.load(os.path.join(kwargs['model_save_folder'], 'vae.pt')))
         except FileNotFoundError:
             raise Exception("No pre-trained encoder")
+
 
     return autoencoder.encoder, (ae_eval_train_history, ae_eval_test_history)
