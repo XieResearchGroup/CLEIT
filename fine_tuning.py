@@ -5,7 +5,7 @@ from mlp import MLP
 from mask_mlp import MaskMLP
 from encoder_decoder import EncoderDecoder
 from torch.nn import functional as F
-from loss_and_metrics import masked_mse
+from loss_and_metrics import masked_mse, masked_simse
 import os
 import torch
 import gc
@@ -42,17 +42,18 @@ def regression_train_step(model, batch, device, optimizer, history, scheduler=No
 
     x = batch[0].to(device)
     y = batch[1].to(device)
-    mse_loss = sum([F.mse_loss(torch.where(torch.isnan(y[i, :]), torch.zeros_like(y[i, :]), y[i, :]),
-                               torch.where(torch.isnan(y[i, :]), torch.zeros_like(y[i, :]), model(x)[i, :]))
-                    for i in range(y.shape[0])])
-    penalty_term = sum([torch.square(torch.sum(
-        torch.where(torch.isnan(y[i, :]), torch.zeros_like(y[i, :]), y[i, :]) -
-        torch.where(torch.isnan(y[i, :]), torch.zeros_like(y[i, :]), model(x)[i, :]))) / torch.square(
-        (~torch.isnan(y[i, :])).sum())
-                        for i in range(y.shape[0])])
-
-    loss = (mse_loss-penalty_term) / y.shape[0]
-    #loss = masked_mse(preds=model(x), labels=y)
+    # mse_loss = sum([F.mse_loss(torch.where(torch.isnan(y[i, :]), torch.zeros_like(y[i, :]), y[i, :]),
+    #                            torch.where(torch.isnan(y[i, :]), torch.zeros_like(y[i, :]), model(x)[i, :]))
+    #                 for i in range(y.shape[0])])
+    # penalty_term = sum([torch.square(torch.sum(
+    #     torch.where(torch.isnan(y[i, :]), torch.zeros_like(y[i, :]), y[i, :]) -
+    #     torch.where(torch.isnan(y[i, :]), torch.zeros_like(y[i, :]), model(x)[i, :]))) / torch.square(
+    #     (~torch.isnan(y[i, :])).sum())
+    #                     for i in range(y.shape[0])])
+    #
+    # loss = (mse_loss-penalty_term) / y.shape[0]
+    loss = masked_simse(preds=model(x), labels=y)
+    print(loss)
     optimizer.zero_grad()
     loss.backward()
     if clip is not None:

@@ -93,12 +93,12 @@ def evaluate_target_regression_epoch(regressor, dataloader, device, history):
     history['cpearsonr'].append(np.mean([pearsonr(y_truths[i, :][~ma.masked_invalid(y_truths[i, :]).mask],
                                                   y_preds[i, :][~ma.masked_invalid(y_truths[i, :]).mask])[0] for i in
                                          range(y_truths.shape[0])]).item())
-    history['dspearmanr'].append(np.mean([spearmanr(y_truths[:, i][~ma.masked_invalid(y_truths[:, i]).mask],
-                                                    y_preds[:, i][~ma.masked_invalid(y_truths[:, i]).mask])[0] for i in
-                                          range(y_truths.shape[1])]).item())
-    history['cspearmanr'].append(np.mean([spearmanr(y_truths[i, :][~ma.masked_invalid(y_truths[i, :]).mask],
-                                                    y_preds[i, :][~ma.masked_invalid(y_truths[i, :]).mask])[0] for i in
-                                          range(y_truths.shape[0])]).item())
+    # history['dspearmanr'].append(np.mean([spearmanr(y_truths[:, i][~ma.masked_invalid(y_truths[:, i]).mask],
+    #                                                 y_preds[:, i][~ma.masked_invalid(y_truths[:, i]).mask])[0] for i in
+    #                                       range(y_truths.shape[1])]).item())
+    # history['cspearmanr'].append(np.mean([spearmanr(y_truths[i, :][~ma.masked_invalid(y_truths[i, :]).mask],
+    #                                                 y_preds[i, :][~ma.masked_invalid(y_truths[i, :]).mask])[0] for i in
+    #                                       range(y_truths.shape[0])]).item())
     history['drmse'].append(np.mean([mean_squared_error(y_truths[:, i][~ma.masked_invalid(y_truths[:, i]).mask],
                                                         y_preds[:, i][~ma.masked_invalid(y_truths[:, i]).mask],
                                                         squared=False) for i in range(y_truths.shape[1])]).item())

@@ -92,6 +92,7 @@ def main(args, update_params_dict):
 
     data_provider = DataProvider(batch_size=training_params['unlabeled']['batch_size'],
                                  target=args.measurement)
+
     if "vae.pt" in os.listdir(training_params['model_save_folder']):
         training_params.update(
             {'retrain_flag': False}
@@ -133,7 +134,7 @@ def main(args, update_params_dict):
                 task_save_folder=task_save_folder,
                 **wrap_training_params(training_params, type='labeled')
             )
-            for metric in ['dpearsonr', 'dspearmanr', 'drmse','cpearsonr', 'cspearmanr', 'crmse']:
+            for metric in ['dpearsonr', 'drmse', 'cpearsonr', 'crmse']:
                 ft_evaluation_metrics[metric].append(ft_historys[-1][metric][-1])
             fold_count += 1
     else:
@@ -154,7 +155,7 @@ def main(args, update_params_dict):
                 task_save_folder=task_save_folder,
                 **wrap_training_params(training_params, type='labeled')
             )
-            for metric in ['dpearsonr', 'dspearmanr', 'drmse','cpearsonr', 'cspearmanr', 'crmse']:
+            for metric in ['dpearsonr', 'drmse', 'cpearsonr', 'crmse']:
                 ft_evaluation_metrics[metric].append(ft_historys[-2][metric][-1])
                 test_ft_evaluation_metrics[metric].append(ft_historys[-1][metric][-1])
             fold_count += 1
@@ -169,7 +170,7 @@ if __name__ == '__main__':
     parser.add_argument('--omics', dest='omics', nargs='?', default='gex',
                         choices=['gex', 'mut'])
     # parser.add_argument('--drug', dest='drug', nargs='?', default='gem', choices=['gem', 'fu', 'cis', 'tem'])
-    parser.add_argument('--metric', dest='metric', nargs='?', default='pearsonr', choices=['pearsonr', 'rmse'])
+    parser.add_argument('--metric', dest='metric', nargs='?', default='cpearsonr', choices=['cpearsonr', 'dpearsonr'])
     parser.add_argument('--measurement', dest='measurement', nargs='?', default='AUC', choices=['AUC', 'LN_IC50'])
     parser.add_argument('--n', dest='n', nargs='?', type=int, default=5)
 
@@ -182,10 +183,8 @@ if __name__ == '__main__':
 
     params_grid = {
         #"pretrain_num_epochs": [0, 50, 100, 200, 300],
-        #"train_num_epochs": [100, 200, 300, 500, 750, 1000, 1500, 2000, 2500, 3000, 4000, 5000],
-        #"dop": [0.0, 0.1],
-        "train_num_epochs": [100],
-        "dop": [0.0],
+        "train_num_epochs": [100, 300, 500, 1000, 2000, 3000, 5000],
+        "dop": [0.0, 0.1],
         "ftrain_num_epochs": [100, 200, 300, 500, 750, 1000]
     }
 
