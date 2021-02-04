@@ -19,6 +19,38 @@ def parse_param_str(param_str):
     return {matches[0][i]: float(matches[0][i + 1]) for i in range(0, len(matches[0]), 2) if matches[0][i] != ''}
 
 
+def parse_ft_param_str(param_str):
+    ftrain_num_epochs = int(param_str[:param_str.find('_')])
+    param_str = param_str[param_str.find('_') + 1:]
+    pattern = re.compile('(pretrain_num_epochs)?_?(\d+)?_?(train_num_epochs)_(\d+)_(dop)_(\d\.\d)')
+    matches = pattern.findall(param_str)
+    return {matches[0][i]: float(matches[0][i + 1]) for i in range(0, len(matches[0]), 2) if
+            matches[0][i] != ''}, ftrain_num_epochs
+
+def parse_hyper_vae_ft_evaluation_result(metric_name='dpearsonr'):
+    folder = 'model_save/vae/gex/'
+    evaluation_metrics = {}
+    evaluation_metrics_std = {}
+    evaluation_metrics_max = {}
+    count = 0
+    for sub_folder in os.listdir(folder):
+        if re.match('(pretrain|train)+.*(dop+).*', sub_folder):
+            for d in os.listdir(os.path.join(folder, sub_folder)):
+                if re.match('(ftrain)+', d):
+                    ft_train_epoch = d.split('_')[-1]
+                    for file in os.listdir(os.path.join(folder, sub_folder, d)):
+                        with open(os.path.join(folder, sub_folder, d, file), 'r') as f:
+                            result_dict = json.load(f)
+                        metrics = result_dict[metric_name]
+                        if any(np.isnan(metrics)):
+                            pass
+                        else:
+                            evaluation_metrics["_".join([ft_train_epoch, file])] = np.mean(metrics)
+                            evaluation_metrics_std["_".join([ft_train_epoch, file])] = np.std(metrics)
+    print(get_largest_kv(d=evaluation_metrics, std_dict=evaluation_metrics_std))
+    return parse_ft_param_str(get_largest_kv(d=evaluation_metrics, std_dict=evaluation_metrics_std)[0])
+
+
 def parse_ft_evaluation_result(file_name, method, category, measurement='AUC', metric_name='auroc'):
     folder = f'model_save/{method}/{measurement}/{category}'
     with open(os.path.join(folder, file_name), 'r') as f:

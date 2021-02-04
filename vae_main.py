@@ -124,7 +124,7 @@ def main(args, update_params_dict):
         for train_labeled_dataloader, val_labeled_dataloader in labeled_dataloader_generator:
             ft_encoder = deepcopy(encoder)
 
-            target_classifier, ft_historys = fine_tuning.fine_tune_encoder_new(
+            target_regressor, ft_historys = fine_tuning.fine_tune_encoder_new(
                 encoder=ft_encoder,
                 train_dataloader=train_labeled_dataloader,
                 val_dataloader=val_labeled_dataloader,
@@ -145,7 +145,7 @@ def main(args, update_params_dict):
         for train_labeled_dataloader, val_labeled_dataloader, test_labeled_dataloader in labeled_dataloader_generator:
             ft_encoder = deepcopy(encoder)
 
-            target_classifier, ft_historys = fine_tuning.fine_tune_encoder_new(
+            target_regressor, ft_historys = fine_tuning.fine_tune_encoder_new(
                 encoder=ft_encoder,
                 train_dataloader=train_labeled_dataloader,
                 val_dataloader=val_labeled_dataloader,
