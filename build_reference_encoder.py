@@ -86,12 +86,15 @@ def build_encoder(args):
             **wrap_training_params(training_params, type='labeled')
         )
     for metric in ['dpearsonr', 'drmse', 'cpearsonr', 'crmse']:
-        ft_evaluation_metrics[metric].append(ft_historys[-1][metric][-1])
+        try:
+            ft_evaluation_metrics[metric].append(ft_historys[-1][metric][-1])
+        except:
+            pass
 
     with open(os.path.join(task_save_folder, f'ft_evaluation_results.json'), 'w') as f:
         json.dump(ft_evaluation_metrics, f)
 
-    torch.save(target_classifier.encoder.state_dict(), os.path.join('./model_save', 'reference_encoder.pt'))
+    torch.save(target_classifier.encoder.state_dict(), os.path.join('model_save', 'reference_encoder.pt'))
 
 
 if __name__ == '__main__':
