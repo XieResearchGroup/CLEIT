@@ -73,23 +73,20 @@ def build_encoder(args):
             pickle.dump(dict(history), f)
 
     ft_evaluation_metrics = defaultdict(list)
-    labeled_dataloader_generator = data_provider.get_drug_labeled_gex_dataloader()
-    fold_count = 0
-    for train_labeled_dataloader, val_labeled_dataloader in labeled_dataloader_generator:
-        ft_encoder = deepcopy(encoder)
-        target_classifier, ft_historys = fine_tuning.fine_tune_encoder_new(
+    labeled_dataloader = data_provider.get_labeled_gex_dataloader()
+    ft_encoder = deepcopy(encoder)
+    target_classifier, ft_historys = fine_tuning.fine_tune_encoder_new(
             encoder=ft_encoder,
-            train_dataloader=train_labeled_dataloader,
-            val_dataloader=val_labeled_dataloader,
-            test_dataloader=val_labeled_dataloader,
-            seed=fold_count,
+            train_dataloader=labeled_dataloader,
+            val_dataloader=labeled_dataloader,
+            test_dataloader=None,
+            seed=2021,
             metric_name=args.metric,
             task_save_folder=task_save_folder,
             **wrap_training_params(training_params, type='labeled')
         )
-        for metric in ['dpearsonr', 'drmse', 'cpearsonr', 'crmse']:
-            ft_evaluation_metrics[metric].append(ft_historys[-1][metric][-1])
-        fold_count += 1
+    for metric in ['dpearsonr', 'drmse', 'cpearsonr', 'crmse']:
+        ft_evaluation_metrics[metric].append(ft_historys[-1][metric][-1])
 
     with open(os.path.join(task_save_folder, f'ft_evaluation_results.json'), 'w') as f:
         json.dump(ft_evaluation_metrics, f)
