@@ -51,14 +51,13 @@ def train_cleit(dataloader, **kwargs):
                       dop=kwargs['dop']).to(kwargs['device'])
 
     # get reference encoder
-    target_decoder = MaskMLP(input_dim=kwargs['latent_dim'],
-                             output_dim=kwargs['output_dim'],
-                             hidden_dims=kwargs['regressor_hidden_dims']).to(kwargs['device'])
-    target_regressor = EncoderDecoder(encoder=autoencoder.encoder,
-                                      decoder=target_decoder).to(kwargs['device'])
-    target_regressor.load_state_dict(torch.load(os.path.join('./model_save', 'target_regressor.pt')))
-
-    reference_encoder = target_regressor.encoder
+    aux_ae = VAE(input_dim=kwargs['input_dim'],
+                      latent_dim=kwargs['latent_dim'],
+                      hidden_dims=kwargs['encoder_hidden_dims'],
+                      dop=kwargs['dop']).to(kwargs['device'])
+    
+    aux_ae.encoder.load_state_dict(torch.load(os.path.join('./model_save', 'reference_encoder.pt')))
+    reference_encoder = aux_ae.encoder
 
     ae_eval_train_history = defaultdict(list)
     ae_eval_test_history = defaultdict(list)
