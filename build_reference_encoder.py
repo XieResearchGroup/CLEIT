@@ -87,7 +87,7 @@ def build_encoder(args):
         )
     for metric in ['dpearsonr', 'drmse', 'cpearsonr', 'crmse']:
         try:
-            ft_evaluation_metrics[metric].append(ft_historys[-1][metric][-1])
+            ft_evaluation_metrics[metric].append(ft_historys[-2][metric][-1])
         except:
             pass
 
