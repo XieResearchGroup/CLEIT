@@ -30,7 +30,7 @@ def cleit_train_step(ae, reference_encoder, batch, device, optimizer, history, s
 
     for k, v in loss_dict.items():
         history[k].append(v)
-    history['code_loss'].append(code_loss.item())
+    history['code_loss'].append(code_loss.cpu().detach().item())
     return history
 
 

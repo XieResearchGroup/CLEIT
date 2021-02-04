@@ -27,8 +27,8 @@ def compute_gradient_penalty(critic, real_samples, fake_samples, device):
     return gradient_penalty
 
 
-def critic_dsn_train_step(critic, ae, s_batch, t_batch, device, optimizer, history, scheduler=None,
-                          clip=None, gp=None):
+def critic_train_step(critic, ae, s_batch, t_batch, device, optimizer, history, scheduler=None,
+                      clip=None, gp=None):
     critic.zero_grad()
     ae.zero_grad()
     ae.eval()
@@ -65,8 +65,8 @@ def critic_dsn_train_step(critic, ae, s_batch, t_batch, device, optimizer, histo
     return history
 
 
-def gan_dsn_gen_train_step(critic, ae, s_batch, t_batch, device, optimizer, alpha, history,
-                           scheduler=None):
+def gan_gen_train_step(critic, ae, s_batch, t_batch, device, optimizer, alpha, history,
+                       scheduler=None):
     critic.zero_grad()
     ae.zero_grad()
     critic.eval()
@@ -137,24 +137,24 @@ def train_adda(s_dataloaders, t_dataloaders, **kwargs):
                 print(f'confounder wgan training epoch {epoch}')
             for step, s_batch in enumerate(s_train_dataloader):
                 t_batch = next(iter(t_train_dataloader))
-                critic_train_history = critic_dsn_train_step(critic=confounding_classifier,
-                                                             ae=autoencoder,
-                                                             s_batch=s_batch,
-                                                             t_batch=t_batch,
-                                                             device=kwargs['device'],
-                                                             optimizer=classifier_optimizer,
-                                                             history=critic_train_history,
-                                                             # clip=0.1,
-                                                             gp=10.0)
+                critic_train_history = critic_train_step(critic=confounding_classifier,
+                                                         ae=autoencoder,
+                                                         s_batch=s_batch,
+                                                         t_batch=t_batch,
+                                                         device=kwargs['device'],
+                                                         optimizer=classifier_optimizer,
+                                                         history=critic_train_history,
+                                                         # clip=0.1,
+                                                         gp=10.0)
                 if (step + 1) % 5 == 0:
-                    gen_train_history = gan_dsn_gen_train_step(critic=confounding_classifier,
-                                                               ae=autoencoder,
-                                                               s_batch=s_batch,
-                                                               t_batch=t_batch,
-                                                               device=kwargs['device'],
-                                                               optimizer=ae_optimizer,
-                                                               alpha=1.0,
-                                                               history=gen_train_history)
+                    gen_train_history = gan_gen_train_step(critic=confounding_classifier,
+                                                           ae=autoencoder,
+                                                           s_batch=s_batch,
+                                                           t_batch=t_batch,
+                                                           device=kwargs['device'],
+                                                           optimizer=ae_optimizer,
+                                                           alpha=1.0,
+                                                           history=gen_train_history)
 
         torch.save(autoencoder.state_dict(), os.path.join(kwargs['model_save_folder'], 'ae.pt'))
     else:
