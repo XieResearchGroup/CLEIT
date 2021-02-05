@@ -137,7 +137,7 @@ def train_cleita(dataloader, **kwargs):
             autoencoder.parameters(),
             transmitter.parameters()
         ]
-        cleit_optimizer = torch.optim.AdamW(*chain(cleit_params), lr=kwargs['lr'])
+        cleit_optimizer = torch.optim.AdamW(chain(*cleit_params), lr=kwargs['lr'])
         classifier_optimizer = torch.optim.RMSprop(confounding_classifier.parameters(), lr=kwargs['lr'])
         for epoch in range(int(kwargs['train_num_epochs'])):
             if epoch % 50 == 0:
