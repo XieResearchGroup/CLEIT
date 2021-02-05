@@ -46,6 +46,8 @@ def parse_hyper_vae_ft_evaluation_result(metric_name='dpearsonr'):
                             else:
                                 evaluation_metrics["_".join([ft_train_epoch, file])] = np.mean(metrics)
                                 evaluation_metrics_std["_".join([ft_train_epoch, file])] = np.std(metrics)
+    print(evaluation_metrics)
+    print(evaluation_metrics_std)
     print(get_largest_kv(d=evaluation_metrics, std_dict=evaluation_metrics_std))
     return parse_ft_param_str(get_largest_kv(d=evaluation_metrics, std_dict=evaluation_metrics_std)[0])
 
