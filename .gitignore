@@ -22,3 +22,4 @@ model_save/*/*/*/*.pickle
 model_save/*/*/*/*/*.pickle
 model/*.pt
 model/*/*.pt
+model/*/*.pickle
