@@ -47,7 +47,6 @@ def train_cleitc(dataloader, **kwargs):
     :param kwargs:
     :return:
     """
-    print(kwargs)
     autoencoder = VAE(input_dim=kwargs['input_dim'],
                       latent_dim=kwargs['latent_dim'],
                       hidden_dims=kwargs['encoder_hidden_dims'],
@@ -72,7 +71,7 @@ def train_cleitc(dataloader, **kwargs):
             autoencoder.parameters(),
             transmitter.parameters()
         ]
-        cleit_optimizer = torch.optim.AdamW(*chain(cleit_params), lr=kwargs['lr'])
+        cleit_optimizer = torch.optim.AdamW(chain(*cleit_params), lr=kwargs['lr'])
         # start autoencoder pretraining
         for epoch in range(int(kwargs['train_num_epochs'])):
             if epoch % 50 == 0:
