@@ -6,6 +6,7 @@ from vae import VAE
 from mlp import MLP
 from loss_and_metrics import contrastive_loss
 from encoder_decoder import EncoderDecoder
+from copy import deepcopy
 
 def cleit_train_step(ae, reference_encoder, transmitter, batch, device, optimizer, history, scheduler=None):
     ae.zero_grad()
@@ -53,10 +54,8 @@ def train_cleitc(dataloader, **kwargs):
                       dop=kwargs['dop']).to(kwargs['device'])
 
     # get reference encoder
-    aux_ae = VAE(input_dim=kwargs['input_dim'],
-                 latent_dim=kwargs['latent_dim'],
-                 hidden_dims=kwargs['encoder_hidden_dims'],
-                 dop=kwargs['dop']).to(kwargs['device'])
+    aux_ae = deepcopy(autoencoder)
+
     aux_ae.encoder.load_state_dict(torch.load(os.path.join('./model_save', 'reference_encoder.pt')))
     reference_encoder = aux_ae.encoder
 
