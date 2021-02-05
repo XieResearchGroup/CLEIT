@@ -75,7 +75,7 @@ def build_encoder(args):
     ft_evaluation_metrics = defaultdict(list)
     labeled_dataloader = data_provider.get_labeled_gex_dataloader()
     ft_encoder = deepcopy(encoder)
-    target_classifier, ft_historys = fine_tuning.fine_tune_encoder_new(
+    target_regressor, ft_historys = fine_tuning.fine_tune_encoder_new(
             encoder=ft_encoder,
             train_dataloader=labeled_dataloader,
             val_dataloader=labeled_dataloader,
@@ -86,12 +86,15 @@ def build_encoder(args):
             **wrap_training_params(training_params, type='labeled')
         )
     for metric in ['dpearsonr', 'drmse', 'cpearsonr', 'crmse']:
-        ft_evaluation_metrics[metric].append(ft_historys[-1][metric][-1])
+        try:
+            ft_evaluation_metrics[metric].append(ft_historys[-2][metric][-1])
+        except:
+            pass
 
     with open(os.path.join(task_save_folder, f'ft_evaluation_results.json'), 'w') as f:
         json.dump(ft_evaluation_metrics, f)
 
-    torch.save(target_classifier.encoder.state_dict(), os.path.join('./model_save', 'reference_encoder.pt'))
+    torch.save(target_regressor.encoder.state_dict(), os.path.join('model_save', 'reference_encoder.pt'))
 
 
 if __name__ == '__main__':
