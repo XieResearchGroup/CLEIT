@@ -20,6 +20,7 @@ model_save/*/*/*/*/*.pt
 model_save/*/*/*.pickle
 model_save/*/*/*/*.pickle
 model_save/*/*/*/*/*.pickle
-model/*.pt
-model/*/*.pt
-model/*/*.pickle
+model_save/*.pt
+model_save/*/*.pt
+model_save/*/*.pickle
+model_save/*.pickle
