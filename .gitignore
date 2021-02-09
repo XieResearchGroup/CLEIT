@@ -11,16 +11,4 @@ mlp_test/*
 __pycache__/
 archive/*
 *.Rhistory
-model_save/*/*/*.csv
-model_save/*/*/*/*.csv
-model_save/*/*/*/*/*.csv
-model_save/*/*/*.pt
-model_save/*/*/*/*.pt
-model_save/*/*/*/*/*.pt
-model_save/*/*/*.pickle
-model_save/*/*/*/*.pickle
-model_save/*/*/*/*/*.pickle
-model_save/*.pt
-model_save/*/*.pt
-model_save/*/*.pickle
-model_save/*.pickle
+model_save/*
