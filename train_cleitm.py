@@ -24,7 +24,7 @@ def cleit_train_step(ae, reference_encoder, transmitter, batch, device, optimize
     x_m_code = transmitter(ae.encoder(x_m))
     x_g_code = reference_encoder(x_g)
 
-    code_loss = mmd_loss(x_g_code, transmitter(x_m_code))
+    code_loss = mmd_loss(x_g_code, transmitter(x_m_code),device=device)
     loss = loss_dict['loss'] + code_loss
     optimizer.zero_grad()
 

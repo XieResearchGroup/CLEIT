@@ -4,8 +4,8 @@ import torch
 from sklearn.metrics import roc_auc_score, average_precision_score, accuracy_score, f1_score, \
     log_loss, auc, precision_recall_curve
 # from sklearn.metrics import r2_score, mean_squared_error
-# from scipy.stats import pearsonr, spearmanr
-# import numpy.ma as ma
+from scipy.stats import pearsonr, spearmanr
+import numpy.ma as ma
 from collections import defaultdict
 
 
@@ -92,14 +92,14 @@ def evaluate_target_regression_epoch(regressor, dataloader, device, history=None
         # output prediction
         raise NotImplementedError
     else:
-        # history['dpearsonr'].append(np.mean([pearsonr(y_truths[:, i][~ma.masked_invalid(y_truths[:, i]).mask],
-        #                                               y_preds[:, i][~ma.masked_invalid(y_truths[:, i]).mask])[0]
-        #                                      for i in range(y_truths.shape[1])]).item())
-        # history['cpearsonr'].append(np.mean([pearsonr(y_truths[i, :][~ma.masked_invalid(y_truths[i, :]).mask],
-        #                                               y_preds[i, :][~ma.masked_invalid(y_truths[i, :]).mask])[0]
-        #                                      for i in range(y_truths.shape[0])]).item())
-        history['cpearsonr'].append(pd.DataFrame(y_truths).corrwith(pd.DataFrame(y_preds), axis=1).mean())
-        history['dpearsonr'].append(pd.DataFrame(y_truths).corrwith(pd.DataFrame(y_preds), axis=0).mean())
+        history['dpearsonr'].append(np.mean([pearsonr(y_truths[:, i][~ma.masked_invalid(y_truths[:, i]).mask],
+                                                      y_preds[:, i][~ma.masked_invalid(y_truths[:, i]).mask])[0]
+                                             for i in range(y_truths.shape[1])]).item())
+        history['cpearsonr'].append(np.mean([pearsonr(y_truths[i, :][~ma.masked_invalid(y_truths[i, :]).mask],
+                                                      y_preds[i, :][~ma.masked_invalid(y_truths[i, :]).mask])[0]
+                                             for i in range(y_truths.shape[0])]).item())
+        # history['cpearsonr'].append(pd.DataFrame(y_truths).corrwith(pd.DataFrame(y_preds), axis=1).mean())
+        # history['dpearsonr'].append(pd.DataFrame(y_truths).corrwith(pd.DataFrame(y_preds), axis=0).mean())
         history['drmse'].append(np.mean(np.nanmean(np.square((y_truths-y_preds)), axis=0)).item())
         history['crmse'].append(np.mean(np.nanmean(np.square((y_truths-y_preds)), axis=1)).item())
         # history['pearsonr'].append(pearsonr(y_truths, y_preds)[0])
