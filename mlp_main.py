@@ -141,7 +141,7 @@ def dict_to_str(d):
 
 def main(args, update_params_dict):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    with open(os.path.join('model_save', 'train_params.json'), 'r') as f:
+    with open('train_params.json', 'r') as f:
         training_params = json.load(f)
 
     training_params['unlabeled'].update(update_params_dict)
