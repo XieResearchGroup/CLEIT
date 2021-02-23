@@ -94,7 +94,7 @@ def train_dsn(s_dataloaders, t_dataloaders, **kwargs):
                     latent_dim=kwargs['latent_dim'],
                     hidden_dims=kwargs['encoder_hidden_dims'],
                     dop=kwargs['dop'],
-                    norm_flag=True).to(kwargs['device'])
+                    norm_flag=False).to(kwargs['device'])
 
     t_dsnae = DSNAE(shared_encoder=shared_encoder,
                     decoder=shared_decoder,
@@ -103,7 +103,7 @@ def train_dsn(s_dataloaders, t_dataloaders, **kwargs):
                     latent_dim=kwargs['latent_dim'],
                     hidden_dims=kwargs['encoder_hidden_dims'],
                     dop=kwargs['dop'],
-                    norm_flag=True).to(kwargs['device'])
+                    norm_flag=False).to(kwargs['device'])
 
 
     device = kwargs['device']

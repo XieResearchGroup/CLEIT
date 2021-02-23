@@ -2,13 +2,12 @@ from evaluation_utils import evaluate_target_regression_epoch, model_save_check
 from collections import defaultdict
 from itertools import chain
 from mlp import MLP
-from mask_mlp import MaskMLP
+from multi_out_mlp import MoMLP
 from encoder_decoder import EncoderDecoder
 from torch.nn import functional as F
 from loss_and_metrics import masked_mse, masked_simse
 import os
 import torch
-import gc
 
 
 def classification_train_step(model, batch, loss_fn, device, optimizer, history, scheduler=None, clip=None):
@@ -73,12 +72,13 @@ def regression_train_step(model, batch, device, optimizer, history, scheduler=No
 
 
 def fine_tune_encoder(encoder, train_dataloader, val_dataloader, seed, task_save_folder, test_dataloader=None,
-                      metric_name='dpearsonr',
+                      metric_name='cpearsonr',
                       normalize_flag=False, **kwargs):
 
-    target_decoder = MaskMLP(input_dim=kwargs['latent_dim'],
-                             output_dim=kwargs['output_dim'],
-                             hidden_dims=kwargs['regressor_hidden_dims']).to(kwargs['device'])
+    target_decoder = MoMLP(input_dim=kwargs['latent_dim'],
+                           output_dim=kwargs['output_dim'],
+                           hidden_dims=kwargs['regressor_hidden_dims'],
+                           out_fn=torch.nn.Sigmoid).to(kwargs['device'])
 
     target_regressor = EncoderDecoder(encoder=encoder,
                                       decoder=target_decoder,
@@ -129,6 +129,10 @@ def fine_tune_encoder(encoder, train_dataloader, val_dataloader, seed, task_save
         if save_flag:
             torch.save(target_regressor.state_dict(),
                        os.path.join(task_save_folder, f'target_regressor_{seed}.pt'))
+
+            torch.save(target_regressor.encoder.state_dict(),
+                       os.path.join(task_save_folder, f'ft_encoder_{seed}.pt'))
+
         if stop_flag:
             try:
                 ind = encoder_module_indices.pop()
@@ -146,16 +150,30 @@ def fine_tune_encoder(encoder, train_dataloader, val_dataloader, seed, task_save
     target_regressor.load_state_dict(
         torch.load(os.path.join(task_save_folder, f'target_regressor_{seed}.pt')))
 
+    evaluate_target_regression_epoch(regressor=target_regressor,
+                                     dataloader=val_dataloader,
+                                     device=kwargs['device'],
+                                     history=None,
+                                     seed=seed,
+                                     output_folder=kwargs['model_save_folder'])
+    evaluate_target_regression_epoch(regressor=target_regressor,
+                                     dataloader=test_dataloader,
+                                     device=kwargs['device'],
+                                     history=None,
+                                     seed=seed,
+                                     output_folder=kwargs['model_save_folder'])
+
     return target_regressor, (target_regression_train_history, target_regression_eval_train_history,
                               target_regression_eval_val_history, target_regression_eval_test_history)
 
 
 def fine_tune_encoder_new(encoder, train_dataloader, val_dataloader, seed, task_save_folder, test_dataloader=None,
-                          metric_name='dpearsonr',
                           normalize_flag=False, **kwargs):
-    target_decoder = MaskMLP(input_dim=kwargs['latent_dim'],
-                             output_dim=kwargs['output_dim'],
-                             hidden_dims=kwargs['regressor_hidden_dims']).to(kwargs['device'])
+
+    target_decoder = MoMLP(input_dim=kwargs['latent_dim'],
+                           output_dim=kwargs['output_dim'],
+                           hidden_dims=kwargs['regressor_hidden_dims'],
+                           out_fn=torch.nn.Sigmoid).to(kwargs['device'])
 
     target_regressor = EncoderDecoder(encoder=encoder,
                                       decoder=target_decoder,
@@ -211,6 +229,19 @@ def fine_tune_encoder_new(encoder, train_dataloader, val_dataloader, seed, task_
 
     torch.save(target_regressor.state_dict(),
                os.path.join(task_save_folder, f'target_regressor_{seed}.pt'))
+
+    evaluate_target_regression_epoch(regressor=target_regressor,
+                                     dataloader=val_dataloader,
+                                     device=kwargs['device'],
+                                     history=None,
+                                     seed=seed,
+                                     output_folder=kwargs['model_save_folder'])
+    evaluate_target_regression_epoch(regressor=target_regressor,
+                                     dataloader=test_dataloader,
+                                     device=kwargs['device'],
+                                     history=None,
+                                     seed=seed,
+                                     output_folder=kwargs['model_save_folder'])
 
     return target_regressor, (target_regression_train_history, target_regression_eval_train_history,
                               target_regression_eval_val_history, target_regression_eval_test_history)

@@ -2,6 +2,7 @@ import pandas as pd
 import torch
 import json
 import os
+import shutil
 import argparse
 import random
 import pickle
@@ -95,6 +96,13 @@ def build_encoder(args):
         json.dump(ft_evaluation_metrics, f)
 
     torch.save(target_regressor.encoder.state_dict(), os.path.join('model_save', 'reference_encoder.pt'))
+def move_encoder(args):
+    parsed_ft_params = parsing_utils.parse_hyper_vae_ft_evaluation_result(metric_name=args.metric)
+    param_str = dict_to_str(parsed_ft_params)
+
+    for file in os.listdir(f'./model_save/vae/gex/{param_str}'):
+        if file.startswith('ft_encoder'):
+            shutil.copyfile(os.path.join(f'./model_save/vae/gex/{param_str}',file), os.path.join('./model_save', file))
 
 
 if __name__ == '__main__':
@@ -104,4 +112,4 @@ if __name__ == '__main__':
     parser.add_argument('--measurement', dest='measurement', nargs='?', default='AUC', choices=['AUC', 'LN_IC50'])
     args = parser.parse_args()
 
-    build_encoder(args)
+    move_encoder(args)

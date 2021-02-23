@@ -35,7 +35,7 @@ def cleit_train_step(ae, reference_encoder, batch, device, optimizer, history, s
     return history
 
 
-def train_cleit(dataloader, **kwargs):
+def train_cleit(dataloader, seed, **kwargs):
     """
 
     :param s_dataloaders:
@@ -52,7 +52,7 @@ def train_cleit(dataloader, **kwargs):
     # get reference encoder
     aux_ae = deepcopy(autoencoder)
 
-    aux_ae.encoder.load_state_dict(torch.load(os.path.join('./model_save', 'reference_encoder.pt')))
+    aux_ae.encoder.load_state_dict(torch.load(os.path.join('./model_save', f'ft_encoder_{seed}.pt')))
     reference_encoder = aux_ae.encoder
 
     ae_eval_train_history = defaultdict(list)

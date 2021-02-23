@@ -1,4 +1,3 @@
-import pandas as pd
 import torch
 import json
 import os
@@ -9,11 +8,7 @@ from collections import defaultdict
 import itertools
 
 from data import DataProvider
-import train_coral
 import train_dsn
-import train_dann
-import train_dcc
-import train_adda
 import train_cleit
 import train_cleitm
 import train_cleita
@@ -77,24 +72,14 @@ def main(args, update_params_dict):
         train_fn = train_cleita.train_cleita
     elif args.method == 'cleitc':
         train_fn = train_cleitc.train_cleitc
-    elif args.method == 'coral':
-        train_fn = train_coral.train_coral
     elif args.method == 'dsn':
         train_fn = train_dsn.train_dsn
-    elif args.method == 'dann':
-        train_fn = train_dann.train_dann
-    elif args.method == 'adda':
-        train_fn = train_adda.train_adda
-    elif args.method == 'dcc':
-        train_fn = train_dcc.train_dcc
     else:
         train_fn = train_cleit.train_cleit
-    # normalize_flag = args.method in ['adsn', 'mdsn', 'ndsn']
-    # normalize_flag = False
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    with open('train_params.json', 'r') as f:
+    with open(os.path.join('model_save', 'train_params.json'), 'r') as f:
         training_params = json.load(f)
 
     training_params['unlabeled'].update(update_params_dict)
@@ -122,50 +107,70 @@ def main(args, update_params_dict):
     )
 
     random.seed(2020)
-
+    labeled_dataloader_generator = data_provider.get_labeled_data_generator(omics='mut')
+    ft_evaluation_metrics = defaultdict(list)
+    test_ft_evaluation_metrics = defaultdict(list)
+    fold_count = 0
     # start unlabeled training
     if 'cleit' not in args.method:
         encoder, historys = train_fn(s_dataloaders=data_provider.get_unlabeld_mut_dataloader(match=True),
                                      t_dataloaders=data_provider.get_unlabeled_gex_dataloader(),
                                      **wrap_training_params(training_params, type='unlabeled'))
+        with open(os.path.join(training_params['model_save_folder'], f'unlabel_train_history.pickle'),
+                  'wb') as f:
+            for history in historys:
+                pickle.dump(dict(history), f)
+
+        for train_labeled_dataloader, val_labeled_dataloader, test_labeled_dataloader in labeled_dataloader_generator:
+            ft_encoder = deepcopy(encoder)
+            target_regressor, ft_historys = fine_tuning.fine_tune_encoder(
+                encoder=ft_encoder,
+                train_dataloader=train_labeled_dataloader,
+                val_dataloader=val_labeled_dataloader,
+                test_dataloader=test_labeled_dataloader,
+                seed=fold_count,
+                metric_name=args.metric,
+                task_save_folder=task_save_folder,
+                **wrap_training_params(training_params, type='labeled')
+            )
+            for metric in ['dpearsonr', 'dspearmanr', 'drmse', 'cpearsonr', 'cspearmanr', 'crmse']:
+                ft_evaluation_metrics[metric].append(ft_historys[-2][metric][ft_historys[-2]['best_index']])
+                test_ft_evaluation_metrics[metric].append(ft_historys[-1][metric][ft_historys[-2]['best_index']])
+            fold_count += 1
+        with open(os.path.join(task_save_folder, f'{param_str}_test_ft_evaluation_results.json'), 'w') as f:
+            json.dump(test_ft_evaluation_metrics, f)
+        with open(os.path.join(task_save_folder, f'{param_str}_ft_evaluation_results.json'), 'w') as f:
+            json.dump(ft_evaluation_metrics, f)
+
     else:
-        encoder, historys = train_fn(dataloader=data_provider.get_unlabeld_mut_dataloader(match=True),
-                                     **wrap_training_params(training_params, type='unlabeled'))
-
-    with open(os.path.join(training_params['model_save_folder'], f'unlabel_train_history.pickle'),
-              'wb') as f:
-        for history in historys:
-            pickle.dump(dict(history), f)
-    labeled_dataloader_generator = data_provider.get_drug_labeled_mut_dataloader()
-    ft_evaluation_metrics = defaultdict(list)
-    test_ft_evaluation_metrics = defaultdict(list)
-    fold_count = 0
-    for train_labeled_dataloader, val_labeled_dataloader, test_labeled_dataloader in labeled_dataloader_generator:
-        ft_encoder = deepcopy(encoder)
-        target_regressor, ft_historys = fine_tuning.fine_tune_encoder(
-            encoder=ft_encoder,
-            train_dataloader=train_labeled_dataloader,
-            val_dataloader=val_labeled_dataloader,
-            test_dataloader=test_labeled_dataloader,
-            seed=fold_count,
-            metric_name=args.metric,
-            task_save_folder=task_save_folder,
-            **wrap_training_params(training_params, type='labeled')
-        )
-        for metric in ['dpearsonr', 'drmse', 'cpearsonr', 'crmse']:
-            ft_evaluation_metrics[metric].append(ft_historys[-2][metric][ft_historys[-2]['best_index']])
-            test_ft_evaluation_metrics[metric].append(ft_historys[-1][metric][ft_historys[-2]['best_index']])
-        fold_count += 1
-    with open(os.path.join(task_save_folder, f'{param_str}_test_ft_evaluation_results.json'), 'w') as f:
-        json.dump(test_ft_evaluation_metrics, f)
-    with open(os.path.join(task_save_folder, f'{param_str}_ft_evaluation_results.json'), 'w') as f:
-        json.dump(ft_evaluation_metrics, f)
-
+        for train_labeled_dataloader, val_labeled_dataloader, test_labeled_dataloader in labeled_dataloader_generator:
+            encoder, historys = train_fn(dataloader=data_provider.get_unlabeld_mut_dataloader(match=True),
+                                         seed=fold_count,
+                                         **wrap_training_params(training_params, type='unlabeled'))
+            ft_encoder = deepcopy(encoder)
+            target_regressor, ft_historys = fine_tuning.fine_tune_encoder(
+                encoder=ft_encoder,
+                train_dataloader=train_labeled_dataloader,
+                val_dataloader=val_labeled_dataloader,
+                test_dataloader=test_labeled_dataloader,
+                seed=fold_count,
+                metric_name=args.metric,
+                task_save_folder=task_save_folder,
+                **wrap_training_params(training_params, type='labeled')
+            )
+            for metric in ['dpearsonr', 'dspearmanr', 'drmse', 'cpearsonr', 'cspearmanr', 'crmse']:
+                ft_evaluation_metrics[metric].append(ft_historys[-2][metric][ft_historys[-2]['best_index']])
+                test_ft_evaluation_metrics[metric].append(ft_historys[-1][metric][ft_historys[-2]['best_index']])
+            fold_count += 1
+            with open(os.path.join(task_save_folder, f'{param_str}_test_ft_evaluation_results.json'), 'w') as f:
+                json.dump(test_ft_evaluation_metrics, f)
+            with open(os.path.join(task_save_folder, f'{param_str}_ft_evaluation_results.json'), 'w') as f:
+                json.dump(ft_evaluation_metrics, f)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('CLEIT training and evaluation')
     parser.add_argument('--method', dest='method', nargs='?', default='cleit',
-                        choices=['cleit', 'cleitc', 'cleita', 'cleitm', 'dsn', 'dcc', 'dann', 'coral', 'adda'])
+                        choices=['cleit', 'cleitc', 'cleita', 'cleitm', 'dsn'])
     # parser.add_argument('--drug', dest='drug', nargs='?', default='gem', choices=['gem', 'fu', 'cis', 'tem'])
     parser.add_argument('--metric', dest='metric', nargs='?', default='cpearsonr', choices=['cpearsonr', 'dpearsonr'])
     parser.add_argument('--measurement', dest='measurement', nargs='?', default='AUC', choices=['AUC', 'LN_IC50'])
@@ -182,11 +187,7 @@ if __name__ == '__main__':
         # "pretrain_num_epochs": [0, 50, 100, 200, 300],
         "train_num_epochs": [100, 300, 500, 1000, 2000, 3000, 5000],
         "dop": [0.0, 0.1],
-        # "train_num_epochs": [100]
     }
-
-    # if args.method not in ['adsn', 'adae', 'dsnw']:
-    #     params_grid.pop('pretrain_num_epochs')
 
     keys, values = zip(*params_grid.items())
     update_params_dict_list = [dict(zip(keys, v)) for v in itertools.product(*values)]

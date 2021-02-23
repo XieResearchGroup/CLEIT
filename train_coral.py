@@ -3,67 +3,33 @@ import torch
 from loss_and_metrics import cov
 from collections import defaultdict
 from ae import AE
-from evaluation_utils import model_save_check
+from evaluation_utils import model_save_check, evaluate_target_regression_epoch
+from loss_and_metrics import masked_simse,masked_mse
+from multi_out_mlp import MoMLP
+from encoder_decoder import EncoderDecoder
 
 
-def eval_ae_epoch(ae, s_dataloader, t_dataloader, device, history):
-    ae.eval()
-    avg_loss_dict = defaultdict(float)
-    s_codes = None
-    t_codes = None
-
-    for x_batch in s_dataloader:
-        x_batch = x_batch[0].to(device)
-        with torch.no_grad():
-            s_code = ae.encode(x_batch)
-            # s_codes = s_code.cpu().detach().numpy() if s_codes is None else np.concatenate([s_codes, s_code.cpu().detach().numpy()], axis=0)
-            s_codes = s_code if s_codes is None else torch.cat((s_codes, s_code))
-            loss_dict = ae.loss_function(*(ae(x_batch)))
-            for k, v in loss_dict.items():
-                avg_loss_dict[k] += v.cpu().detach().item() / len(s_dataloader)
-
-    for x_batch in t_dataloader:
-        x_batch = x_batch[0].to(device)
-        with torch.no_grad():
-            t_code = ae.encode(x_batch)
-            # t_codes = t_code.cpu().detach().numpy() if t_codes is None else np.concatenate([t_codes, t_code.cpu().detach().numpy()], axis=0)
-            t_codes = t_code if t_codes is None else torch.cat((t_codes, t_code))
-
-            loss_dict = ae.loss_function(*(ae(x_batch)))
-            for k, v in loss_dict.items():
-                avg_loss_dict[k] += v.cpu().detach().item() / len(t_dataloader)
-
-    for k, v in avg_loss_dict.items():
-        history[k].append(v)
-
-    history['coral_loss'].append(((torch.square(torch.norm(cov(s_codes) - cov(t_codes), p='fro'))) / (
-            4 * (s_codes.size()[-1] ** 2))).cpu().detach().numpy().ravel())
-    # history['coral_loss'].append((torch.square(torch.norm(cov(s_codes)-cov(t_codes), p='fro'))).cpu().detach().numpy().ravel())
-    history['loss'][-1] += history['coral_loss'][-1]
-
-    return history
-
-
-def coral_ae_train_step(ae, s_batch, t_batch, device, optimizer, alpha, history, scheduler=None):
-    ae.zero_grad()
-    ae.train()
+def coral_train_step(model, s_batch, t_batch, device, optimizer, alpha, history, scheduler=None):
+    model.zero_grad()
+    model.train()
 
     s_x = s_batch[0].to(device)
-    t_x = t_batch[0].to(device)
+    s_y = s_batch[1].to(device)
 
-    s_code = ae.encode(s_x)
-    t_code = ae.encode(t_x)
+    t_x = t_batch[0].to(device)
+    t_y = t_batch[1].to(device)
+
+    s_code = model.encode(s_x)
+    t_code = model.encode(t_x)
+
     s_cov = cov(s_code)
     t_cov = cov(t_code)
 
     coral_loss = (torch.square(torch.norm(s_cov - t_cov, p='fro'))) / (4 * (s_code.size()[-1] ** 2))
     # coral_loss = torch.square(torch.norm(s_cov-t_cov, p='fro'))
 
-    s_loss_dict = ae.loss_function(*ae(s_x))
-    t_loss_dict = ae.loss_function(*ae(t_x))
+    loss = masked_mse(preds=model(s_x), labels=s_y) + masked_mse(preds=model(t_x), labels=t_y) + alpha * coral_loss
 
-    optimizer.zero_grad()
-    loss = s_loss_dict['loss'] + t_loss_dict['loss'] + alpha * coral_loss
     optimizer.zero_grad()
 
     loss.backward()
@@ -71,17 +37,13 @@ def coral_ae_train_step(ae, s_batch, t_batch, device, optimizer, alpha, history,
     if scheduler is not None:
         scheduler.step()
 
-    loss_dict = {k: v.cpu().detach().item() + t_loss_dict[k].cpu().detach().item() for k, v in s_loss_dict.items()}
-
-    for k, v in loss_dict.items():
-        history[k].append(v)
-
+    history['loss'].append(loss.cpu().detach().item())
     history['coral_loss'].append(coral_loss.cpu().detach().item())
 
     return history
 
 
-def train_coral(s_dataloaders, t_dataloaders, **kwargs):
+def train_coral(s_dataloaders, t_dataloaders, val_dataloader, test_dataloader, metric_name, seed, **kwargs):
     """
 
     :param s_dataloaders:
@@ -90,57 +52,84 @@ def train_coral(s_dataloaders, t_dataloaders, **kwargs):
     :return:
     """
     s_train_dataloader = s_dataloaders
-    s_test_dataloader = s_dataloaders
-
     t_train_dataloader = t_dataloaders
-    t_test_dataloader = t_dataloaders
 
     autoencoder = AE(input_dim=kwargs['input_dim'],
                      latent_dim=kwargs['latent_dim'],
                      hidden_dims=kwargs['encoder_hidden_dims'],
                      dop=kwargs['dop']).to(kwargs['device'])
+    encoder = autoencoder.encoder
 
+    target_decoder = MoMLP(input_dim=kwargs['latent_dim'],
+                           output_dim=kwargs['output_dim'],
+                           hidden_dims=kwargs['regressor_hidden_dims'],
+                           out_fn=torch.nn.Sigmoid).to(kwargs['device'])
 
-    ae_train_history = defaultdict(list)
+    target_regressor = EncoderDecoder(encoder=encoder,
+                                      decoder=target_decoder).to(kwargs['device'])
+
+    train_history = defaultdict(list)
     # ae_eval_train_history = defaultdict(list)
-    ae_eval_val_history = defaultdict(list)
+    val_history = defaultdict(list)
+    s_target_regression_eval_train_history = defaultdict(list)
+    t_target_regression_eval_train_history = defaultdict(list)
+    target_regression_eval_val_history = defaultdict(list)
+    target_regression_eval_test_history = defaultdict(list)
 
+    model_optimizer = torch.optim.AdamW(target_regressor.parameters(), lr=kwargs['lr'])
+    for epoch in range(int(kwargs['train_num_epochs'])):
+        if epoch % 50 == 0:
+            print(f'Coral training epoch {epoch}')
+        for step, s_batch in enumerate(s_train_dataloader):
+            t_batch = next(iter(t_train_dataloader))
+            train_history = coral_train_step(model=target_regressor,
+                                             s_batch=s_batch,
+                                             t_batch=t_batch,
+                                             device=kwargs['device'],
+                                             optimizer=model_optimizer,
+                                             alpha=kwargs['alpha'],
+                                             history=train_history)
+        s_target_regression_eval_train_history = evaluate_target_regression_epoch(regressor=target_regressor,
+                                                                                  dataloader=s_train_dataloader,
+                                                                                  device=kwargs['device'],
+                                                                                  history=s_target_regression_eval_train_history)
 
-    if kwargs['retrain_flag']:
-        ae_optimizer = torch.optim.AdamW(autoencoder.parameters(), lr=kwargs['lr'])
-        for epoch in range(int(kwargs['train_num_epochs'])):
-            if epoch % 50 == 0:
-                print(f'AE training epoch {epoch}')
-            for step, s_batch in enumerate(s_train_dataloader):
-                t_batch = next(iter(t_train_dataloader))
-                ae_train_history = coral_ae_train_step(ae=autoencoder,
-                                                       s_batch=s_batch,
-                                                       t_batch=t_batch,
-                                                       device=kwargs['device'],
-                                                       optimizer=ae_optimizer,
-                                                       alpha=kwargs['alpha'],
-                                                       history=ae_train_history)
-            ae_eval_val_history = eval_ae_epoch(ae=autoencoder,
-                                                s_dataloader=s_test_dataloader,
-                                                t_dataloader=t_test_dataloader,
-                                                device=kwargs['device'],
-                                                history=ae_eval_val_history)
-            save_flag, stop_flag = model_save_check(ae_eval_val_history, metric_name='loss', tolerance_count=50)
-            if kwargs['es_flag']:
-                if save_flag:
-                    torch.save(autoencoder.state_dict(), os.path.join(kwargs['model_save_folder'], 'coral_ae.pt'))
-                if stop_flag:
-                    break
+        t_target_regression_eval_train_history = evaluate_target_regression_epoch(regressor=target_regressor,
+                                                                                  dataloader=t_train_dataloader,
+                                                                                  device=kwargs['device'],
+                                                                                  history=t_target_regression_eval_train_history)
+        target_regression_eval_val_history = evaluate_target_regression_epoch(regressor=target_regressor,
+                                                                              dataloader=val_dataloader,
+                                                                              device=kwargs['device'],
+                                                                              history=target_regression_eval_val_history)
+        target_regression_eval_test_history = evaluate_target_regression_epoch(regressor=target_regressor,
+                                                                               dataloader=test_dataloader,
+                                                                               device=kwargs['device'],
+                                                                               history=target_regression_eval_test_history)
 
-        if kwargs['es_flag']:
-            autoencoder.load_state_dict(torch.load(os.path.join(kwargs['model_save_folder'], 'coral_ae.pt')))
+        save_flag, stop_flag = model_save_check(history=target_regression_eval_val_history,
+                                                metric_name=metric_name,
+                                                tolerance_count=50)
+        if save_flag:
+            torch.save(target_regressor.state_dict(), os.path.join(kwargs['model_save_folder'], f'coral_regressor_{seed}.pt'))
+        if stop_flag:
+            break
+    target_regressor.load_state_dict(
+        torch.load(os.path.join(kwargs['model_save_folder'], f'coral_regressor_{seed}.pt')))
 
-        torch.save(autoencoder.state_dict(), os.path.join(kwargs['model_save_folder'], 'coral_ae.pt'))
+    evaluate_target_regression_epoch(regressor=target_regressor,
+                                     dataloader=val_dataloader,
+                                     device=kwargs['device'],
+                                     history=None,
+                                     seed=seed,
+                                     output_folder=kwargs['model_save_folder'])
+    evaluate_target_regression_epoch(regressor=target_regressor,
+                                     dataloader=test_dataloader,
+                                     device=kwargs['device'],
+                                     history=None,
+                                     seed=seed,
+                                     output_folder=kwargs['model_save_folder'])
 
-    else:
-        try:
-            autoencoder.load_state_dict(torch.load(os.path.join(kwargs['model_save_folder'], 'coral_ae.pt')))
-        except FileNotFoundError:
-            raise Exception("No pre-trained encoder")
-
-    return autoencoder.encoder, (ae_train_history, ae_eval_val_history)
+    return target_regressor, (
+        train_history, s_target_regression_eval_train_history, t_target_regression_eval_train_history,
+        target_regression_eval_val_history, target_regression_eval_test_history)

@@ -1,22 +1,18 @@
 from evaluation_utils import evaluate_target_regression_epoch, model_save_check
 from collections import defaultdict
-from itertools import chain
 from mlp import MLP
-from mask_mlp import MaskMLP
+from multi_out_mlp import MoMLP
 from encoder_decoder import EncoderDecoder
 from loss_and_metrics import masked_mse, masked_simse
-from vae import VAE
+from ae import AE
 from data import DataProvider
 import torch
 import json
 import os
 import argparse
-import itertools
+
 
 def regression_train_step(model, batch, device, optimizer, history, scheduler=None, clip=None):
-    # gc.collect()
-    # torch.cuda.empty_cache()
-
     model.zero_grad()
     model.train()
 
@@ -37,19 +33,19 @@ def regression_train_step(model, batch, device, optimizer, history, scheduler=No
     return history
 
 
-def fine_tune_encoder(train_dataloader, val_dataloader, seed, task_save_folder, test_dataloader=None,
-                      metric_name='dpearsonr',
+def fine_tune_encoder(train_dataloader, val_dataloader, seed, test_dataloader=None,
+                      metric_name='cpearsonr',
                       normalize_flag=False, **kwargs):
-
-    autoencoder = VAE(input_dim=kwargs['input_dim'],
-                      latent_dim=kwargs['latent_dim'],
-                      hidden_dims=kwargs['encoder_hidden_dims'],
-                      dop=kwargs['dop']).to(kwargs['device'])
+    autoencoder = AE(input_dim=kwargs['input_dim'],
+                     latent_dim=kwargs['latent_dim'],
+                     hidden_dims=kwargs['encoder_hidden_dims'],
+                     dop=kwargs['dop']).to(kwargs['device'])
     encoder = autoencoder.encoder
 
-    target_decoder = MaskMLP(input_dim=kwargs['latent_dim'],
-                             output_dim=kwargs['output_dim'],
-                             hidden_dims=kwargs['regressor_hidden_dims']).to(kwargs['device'])
+    target_decoder = MoMLP(input_dim=kwargs['latent_dim'],
+                           output_dim=kwargs['output_dim'],
+                           hidden_dims=kwargs['regressor_hidden_dims'],
+                           out_fn=torch.nn.Sigmoid).to(kwargs['device'])
 
     target_regressor = EncoderDecoder(encoder=encoder,
                                       decoder=target_decoder,
@@ -60,19 +56,11 @@ def fine_tune_encoder(train_dataloader, val_dataloader, seed, task_save_folder, 
     target_regression_eval_val_history = defaultdict(list)
     target_regression_eval_test_history = defaultdict(list)
 
-    encoder_module_indices = [i for i in range(len(list(encoder.modules())))
-                              if str(list(encoder.modules())[i]).startswith('Linear')]
-
-    reset_count = 1
-    lr = kwargs['lr']
-
-    target_regression_params = [target_regressor.decoder.parameters()]
-    target_regression_optimizer = torch.optim.AdamW(chain(*target_regression_params),
-                                                    lr=lr)
+    target_regression_optimizer = torch.optim.AdamW(target_regressor.parameters(), lr=kwargs['lr'])
 
     for epoch in range(kwargs['train_num_epochs']):
         if epoch % 50 == 0:
-            print(f'Fine tuning epoch {epoch}')
+            print(f'MLP fine-tuning epoch {epoch}')
         for step, batch in enumerate(train_dataloader):
             target_regression_train_history = regression_train_step(model=target_regressor,
                                                                     batch=batch,
@@ -95,27 +83,28 @@ def fine_tune_encoder(train_dataloader, val_dataloader, seed, task_save_folder, 
                                                                                    history=target_regression_eval_test_history)
         save_flag, stop_flag = model_save_check(history=target_regression_eval_val_history,
                                                 metric_name=metric_name,
-                                                tolerance_count=10,
-                                                reset_count=reset_count)
+                                                tolerance_count=50)
         if save_flag:
             torch.save(target_regressor.state_dict(),
-                       os.path.join(task_save_folder, f'target_regressor_{seed}.pt'))
+                       os.path.join(kwargs['model_save_folder'], f'target_regressor_{seed}.pt'))
         if stop_flag:
-            try:
-                ind = encoder_module_indices.pop()
-                print(f'Unfreezing {epoch}')
-                target_regressor.load_state_dict(
-                    torch.load(os.path.join(task_save_folder, f'target_regressor_{seed}.pt')))
-
-                target_regression_params.append(list(target_regressor.encoder.modules())[ind].parameters())
-                lr = lr * kwargs['decay_coefficient']
-                target_regression_optimizer = torch.optim.AdamW(chain(*target_regression_params), lr=lr)
-                reset_count += 1
-            except IndexError:
-                break
+            break
 
     target_regressor.load_state_dict(
-        torch.load(os.path.join(task_save_folder, f'target_regressor_{seed}.pt')))
+        torch.load(os.path.join(kwargs['model_save_folder'], f'target_regressor_{seed}.pt')))
+
+    evaluate_target_regression_epoch(regressor=target_regressor,
+                                     dataloader=val_dataloader,
+                                     device=kwargs['device'],
+                                     history=None,
+                                     seed=seed,
+                                     output_folder=kwargs['model_save_folder'])
+    evaluate_target_regression_epoch(regressor=target_regressor,
+                                     dataloader=test_dataloader,
+                                     device=kwargs['device'],
+                                     history=None,
+                                     seed=seed,
+                                     output_folder=kwargs['model_save_folder'])
 
     return target_regressor, (target_regression_train_history, target_regression_eval_train_history,
                               target_regression_eval_val_history, target_regression_eval_test_history)
@@ -139,28 +128,16 @@ def dict_to_str(d):
     return "_".join(["_".join([k, str(v)]) for k, v in d.items()])
 
 
-def main(args, update_params_dict):
+def main(args):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    with open('train_params.json', 'r') as f:
+    with open(os.path.join('model_save', 'train_params.json'), 'r') as f:
         training_params = json.load(f)
-
-    training_params['unlabeled'].update(update_params_dict)
-    #patching
-    training_params['labeled']['train_num_epochs'] = update_params_dict['ftrain_num_epochs']
-
-    f_epoch = update_params_dict.pop('ftrain_num_epochs')
-    param_str = dict_to_str(update_params_dict)
 
     training_params.update(
         {
             'device': device,
-            'model_save_folder': os.path.join('model_save', 'mlp', args.omics, param_str),
-            'es_flag': False,
-            'retrain_flag': args.retrain_flag
+            'model_save_folder': os.path.join('model_save', 'mlp', args.omics),
         })
-    task_save_folder = os.path.join('model_save', 'mlp', args.omics, param_str)
-    safe_make_dir(training_params['model_save_folder'])
-    safe_make_dir(task_save_folder)
 
     data_provider = DataProvider(batch_size=training_params['unlabeled']['batch_size'],
                                  target=args.measurement)
@@ -183,11 +160,10 @@ def main(args, update_params_dict):
                 test_dataloader=val_labeled_dataloader,
                 seed=fold_count,
                 metric_name=args.metric,
-                task_save_folder=task_save_folder,
                 **wrap_training_params(training_params, type='labeled')
             )
-            for metric in ['dpearsonr', 'drmse', 'cpearsonr', 'crmse']:
-                ft_evaluation_metrics[metric].append(ft_historys[-1][metric][-1])
+            for metric in ['dpearsonr', 'dspearmanr','drmse', 'cpearsonr', 'cspearmanr','crmse']:
+                ft_evaluation_metrics[metric].append(ft_historys[-2][metric][ft_historys[-2]['best_index']])
             fold_count += 1
     else:
         labeled_dataloader_generator = data_provider.get_drug_labeled_mut_dataloader()
@@ -201,16 +177,15 @@ def main(args, update_params_dict):
                 test_dataloader=test_labeled_dataloader,
                 seed=fold_count,
                 metric_name=args.metric,
-                task_save_folder=task_save_folder,
                 **wrap_training_params(training_params, type='labeled')
             )
-            for metric in ['dpearsonr', 'drmse', 'cpearsonr', 'crmse']:
-                ft_evaluation_metrics[metric].append(ft_historys[-2][metric][-1])
-                test_ft_evaluation_metrics[metric].append(ft_historys[-1][metric][-1])
+            for metric in ['dpearsonr', 'dspearmanr','drmse', 'cpearsonr', 'cspearmanr','crmse']:
+                ft_evaluation_metrics[metric].append(ft_historys[-2][metric][ft_historys[-2]['best_index']])
+                test_ft_evaluation_metrics[metric].append(ft_historys[-1][metric][ft_historys[-2]['best_index']])
             fold_count += 1
-        with open(os.path.join(task_save_folder, f'{param_str}_test_ft_evaluation_results.json'), 'w') as f:
+        with open(os.path.join(training_params['model_save_folder'], f'test_ft_evaluation_results.json'), 'w') as f:
             json.dump(test_ft_evaluation_metrics, f)
-    with open(os.path.join(task_save_folder, f'{param_str}_ft_evaluation_results.json'), 'w') as f:
+    with open(os.path.join(training_params['model_save_folder'], f'ft_evaluation_results.json'), 'w') as f:
         json.dump(ft_evaluation_metrics, f)
 
 
@@ -226,18 +201,8 @@ if __name__ == '__main__':
     train_group = parser.add_mutually_exclusive_group(required=False)
     train_group.add_argument('--train', dest='retrain_flag', action='store_true')
     train_group.add_argument('--no-train', dest='retrain_flag', action='store_false')
-    parser.set_defaults(retrain_flag=False)
+    parser.set_defaults(retrain_flag=True)
 
     args = parser.parse_args()
 
-    params_grid = {
-        "train_num_epochs": [1000],
-        "dop": [0.0, 0.1],
-        "ftrain_num_epochs": [100]
-    }
-
-    keys, values = zip(*params_grid.items())
-    update_params_dict_list = [dict(zip(keys, v)) for v in itertools.product(*values)]
-
-    for param_dict in update_params_dict_list:
-        main(args=args, update_params_dict=param_dict)
+    main(args=args)

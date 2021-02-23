@@ -11,7 +11,7 @@ def masked_mse(preds, labels, null_val=np.nan):
     else:
         mask = (labels != null_val)
     mask = mask.float()
-    mask_k = torch.sum(mask, dim=1, keepdim=True)
+    mask_k = torch.sum(mask, dim=0, keepdim=True)
     mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
     diffs = preds - labels
 
@@ -20,7 +20,7 @@ def masked_mse(preds, labels, null_val=np.nan):
     loss = loss ** 2
 
     mse_loss = loss / mask_k.expand_as(loss)
-    mse_loss = torch.sum(mse_loss) / mask.shape[0]
+    mse_loss = torch.sum(mse_loss) / mask.shape[1]
 
     return mse_loss
 
@@ -31,7 +31,7 @@ def masked_simse(preds, labels, null_val=np.nan):
     else:
         mask = (labels != null_val)
     mask = mask.float()
-    mask_k = torch.sum(mask, dim=1, keepdim=True)
+    mask_k = torch.sum(mask, dim=0, keepdim=True)
     mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
     diffs = preds - labels
 
@@ -40,13 +40,13 @@ def masked_simse(preds, labels, null_val=np.nan):
     loss = loss ** 2
 
     mse_loss = loss / mask_k.expand_as(loss)
-    mse_loss = torch.sum(mse_loss) / mask.shape[0]
+    mse_loss = torch.sum(mse_loss) / mask.shape[1]
 
     diffs = diffs * mask
     diffs = torch.where(torch.isnan(diffs), torch.zeros_like(diffs), diffs)
-    penalty = torch.sum(torch.square(torch.sum(diffs, dim=1, keepdim=True)) / torch.square(mask_k)) / mask.shape[0]
+    penalty = torch.sum(torch.square(torch.sum(diffs, dim=0, keepdim=True)) / torch.square(mask_k)) / mask.shape[1]
 
-    return mse_loss - penalty
+    return mse_loss - 0.1*penalty
 
 
 def cov(m, rowvar=False):

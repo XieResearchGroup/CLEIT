@@ -39,7 +39,7 @@ def cleit_train_step(ae, reference_encoder, transmitter, batch, device, optimize
     return history
 
 
-def train_cleitc(dataloader, **kwargs):
+def train_cleitc(dataloader, seed, **kwargs):
     """
 
     :param s_dataloaders:
@@ -55,7 +55,7 @@ def train_cleitc(dataloader, **kwargs):
     # get reference encoder
     aux_ae = deepcopy(autoencoder)
 
-    aux_ae.encoder.load_state_dict(torch.load(os.path.join('./model_save', 'reference_encoder.pt')))
+    aux_ae.encoder.load_state_dict(torch.load(os.path.join('./model_save', f'ft_encoder_{seed}.pt')))
     reference_encoder = aux_ae.encoder
 
     # construct transmitter
