@@ -137,11 +137,6 @@ def main(args, update_params_dict):
                 ft_evaluation_metrics[metric].append(ft_historys[-2][metric][ft_historys[-2]['best_index']])
                 test_ft_evaluation_metrics[metric].append(ft_historys[-1][metric][ft_historys[-2]['best_index']])
             fold_count += 1
-        with open(os.path.join(task_save_folder, f'{param_str}_test_ft_evaluation_results.json'), 'w') as f:
-            json.dump(test_ft_evaluation_metrics, f)
-        with open(os.path.join(task_save_folder, f'{param_str}_ft_evaluation_results.json'), 'w') as f:
-            json.dump(ft_evaluation_metrics, f)
-
     else:
         for train_labeled_dataloader, val_labeled_dataloader, test_labeled_dataloader in labeled_dataloader_generator:
             encoder, historys = train_fn(dataloader=data_provider.get_unlabeld_mut_dataloader(match=True),
@@ -162,9 +157,9 @@ def main(args, update_params_dict):
                 ft_evaluation_metrics[metric].append(ft_historys[-2][metric][ft_historys[-2]['best_index']])
                 test_ft_evaluation_metrics[metric].append(ft_historys[-1][metric][ft_historys[-2]['best_index']])
             fold_count += 1
-            with open(os.path.join(task_save_folder, f'{param_str}_test_ft_evaluation_results.json'), 'w') as f:
+        with open(os.path.join(task_save_folder, f'{param_str}_test_ft_evaluation_results.json'), 'w') as f:
                 json.dump(test_ft_evaluation_metrics, f)
-            with open(os.path.join(task_save_folder, f'{param_str}_ft_evaluation_results.json'), 'w') as f:
+        with open(os.path.join(task_save_folder, f'{param_str}_ft_evaluation_results.json'), 'w') as f:
                 json.dump(ft_evaluation_metrics, f)
 
 if __name__ == '__main__':
