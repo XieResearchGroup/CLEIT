@@ -23,7 +23,7 @@ class VAE(BaseAE):
             nn.Sequential(
                 nn.Linear(input_dim, hidden_dims[0], bias=True),
                 #nn.BatchNorm1d(hidden_dims[0]),
-                nn.ReLU(),
+                nn.SELU(),
                 nn.Dropout(self.dop)
             )
         )
@@ -33,7 +33,7 @@ class VAE(BaseAE):
                 nn.Sequential(
                     nn.Linear(hidden_dims[i], hidden_dims[i + 1], bias=True),
                     #nn.BatchNorm1d(hidden_dims[i + 1]),
-                    nn.ReLU(),
+                    nn.SELU(),
                     nn.Dropout(self.dop)
                 )
             )
@@ -53,7 +53,7 @@ class VAE(BaseAE):
             nn.Sequential(
                 nn.Linear(latent_dim, hidden_dims[-1], bias=True),
                 #nn.BatchNorm1d(hidden_dims[-1]),
-                nn.ReLU(),
+                nn.SELU(),
                 nn.Dropout(self.dop)
             )
         )
@@ -65,19 +65,17 @@ class VAE(BaseAE):
                 nn.Sequential(
                     nn.Linear(hidden_dims[i], hidden_dims[i + 1], bias=True),
                     #nn.BatchNorm1d(hidden_dims[i + 1]),
-                    nn.ReLU(),
+                    nn.SELU(),
                     nn.Dropout(self.dop)
                 )
             )
         self.decoder = nn.Sequential(*modules)
 
         self.final_layer = nn.Sequential(
-            nn.Linear(hidden_dims[-1], hidden_dims[-1], bias=True),
-            #nn.BatchNorm1d(hidden_dims[-1]),
-            nn.ReLU(),
-            nn.Dropout(self.dop),
             nn.Linear(hidden_dims[-1], input_dim)
         )
+        hidden_dims.reverse()
+
 
     def encode(self, input: Tensor) -> Tensor:
         if self.noise_flag and self.training:

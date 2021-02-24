@@ -30,7 +30,7 @@ class DSNAE(BaseAE):
             nn.Sequential(
                 nn.Linear(input_dim, hidden_dims[0], bias=True),
                 # nn.BatchNorm1d(hidden_dims[0]),
-                nn.ReLU(),
+                nn.SELU(),
                 nn.Dropout(self.dop)
             )
         )
@@ -39,13 +39,10 @@ class DSNAE(BaseAE):
             modules.append(
                 nn.Sequential(
                     nn.Linear(hidden_dims[i], hidden_dims[i + 1], bias=True),
-                    # nn.Dropout(0.1),
-                    # nn.BatchNorm1d(hidden_dims[i + 1]),
-                    nn.ReLU(),
+                    nn.SELU(),
                     nn.Dropout(self.dop)
                 )
             )
-        modules.append(nn.Dropout(self.dop))
         modules.append(nn.Linear(hidden_dims[-1], latent_dim, bias=True))
         # modules.append(nn.LayerNorm(latent_dim, eps=1e-12, elementwise_affine=False))
 
@@ -59,7 +56,7 @@ class DSNAE(BaseAE):
         #         nn.Linear(2 * latent_dim, hidden_dims[-1], bias=True),
         #         # nn.Dropout(0.1),
         #         nn.BatchNorm1d(hidden_dims[-1]),
-        #         nn.ReLU()
+        #         nn.SELU()
         #     )
         # )
         #
@@ -71,7 +68,7 @@ class DSNAE(BaseAE):
         #             nn.Linear(hidden_dims[i], hidden_dims[i + 1], bias=True),
         #             nn.BatchNorm1d(hidden_dims[i + 1]),
         #             # nn.Dropout(0.1),
-        #             nn.ReLU()
+        #             nn.SELU()
         #         )
         #     )
         # self.decoder = nn.Sequential(*modules)
@@ -79,7 +76,7 @@ class DSNAE(BaseAE):
         # self.final_layer = nn.Sequential(
         #     nn.Linear(hidden_dims[-1], hidden_dims[-1], bias=True),
         #     nn.BatchNorm1d(hidden_dims[-1]),
-        #     nn.ReLU(),
+        #     nn.SELU(),
         #     nn.Dropout(0.1),
         #     nn.Linear(hidden_dims[-1], input_dim)
         # )

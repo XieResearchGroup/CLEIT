@@ -137,12 +137,12 @@ def train_dann(s_dataloaders, t_dataloaders, val_dataloader, test_dataloader, me
     target_regressor.load_state_dict(
         torch.load(os.path.join(kwargs['model_save_folder'], f'dann_regressor_{seed}.pt')))
 
-    evaluate_target_regression_epoch(regressor=target_regressor,
-                                     dataloader=val_dataloader,
-                                     device=kwargs['device'],
-                                     history=None,
-                                     seed=seed,
-                                     output_folder=kwargs['model_save_folder'])
+    # evaluate_target_regression_epoch(regressor=target_regressor,
+    #                                  dataloader=val_dataloader,
+    #                                  device=kwargs['device'],
+    #                                  history=None,
+    #                                  seed=seed,
+    #                                  output_folder=kwargs['model_save_folder'])
     evaluate_target_regression_epoch(regressor=target_regressor,
                                      dataloader=test_dataloader,
                                      device=kwargs['device'],

@@ -57,6 +57,7 @@ def train_cleitm(dataloader, seed, **kwargs):
     aux_ae = deepcopy(autoencoder)
 
     aux_ae.encoder.load_state_dict(torch.load(os.path.join('./model_save', f'ft_encoder_{seed}.pt')))
+    print('reference encoder loaded')
     reference_encoder = aux_ae.encoder
 
     # construct transmitter

@@ -138,7 +138,7 @@ class DataProvider:
 
         sample_label_vec = (
                     labeled_target_df.isna().sum(axis=1) <= labeled_target_df.isna().sum(axis=1).median()).astype('int')
-        s_kfold = StratifiedKFold(n_splits=5, random_state=self.seed)
+        s_kfold = StratifiedKFold(n_splits=5, random_state=self.seed, shuffle=True)
 
         if omics == 'gex':
             for train_index, test_index in s_kfold.split(self.gex_dat.loc[labeled_samples].values,
@@ -261,7 +261,7 @@ class DataProvider:
             pass
 
         else:
-            s_kfold = StratifiedKFold(n_splits=5, random_state=self.seed)
+            s_kfold = StratifiedKFold(n_splits=5, random_state=self.seed, shuffle=True)
             for train_index, test_index in s_kfold.split(self.gex_dat.loc[gex_labeled_samples].values,
                                                          sample_label_vec):
                 train_labeled_df, test_labeled_df = self.gex_dat.loc[gex_labeled_samples].values[train_index], \
@@ -333,7 +333,7 @@ class DataProvider:
             # return labeled_mut_dataloader, labeled_drug_mut_only_dataloader
 
         else:
-            s_kfold = StratifiedKFold(n_splits=5, random_state=self.seed)
+            s_kfold = StratifiedKFold(n_splits=5, random_state=self.seed, shuffle=True)
             for train_index, test_index in s_kfold.split(self.ccle_mut_dat.loc[mut_labeled_samples].values,
                                                          sample_label_vec):
                 train_labeled_df, test_labeled_df = self.ccle_mut_dat.loc[mut_labeled_samples].values[train_index], \

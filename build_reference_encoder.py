@@ -77,15 +77,15 @@ def build_encoder(args):
     labeled_dataloader = data_provider.get_labeled_gex_dataloader()
     ft_encoder = deepcopy(encoder)
     target_regressor, ft_historys = fine_tuning.fine_tune_encoder_new(
-            encoder=ft_encoder,
-            train_dataloader=labeled_dataloader,
-            val_dataloader=labeled_dataloader,
-            test_dataloader=None,
-            seed=2021,
-            metric_name=args.metric,
-            task_save_folder=task_save_folder,
-            **wrap_training_params(training_params, type='labeled')
-        )
+        encoder=ft_encoder,
+        train_dataloader=labeled_dataloader,
+        val_dataloader=labeled_dataloader,
+        test_dataloader=None,
+        seed=2021,
+        metric_name=args.metric,
+        task_save_folder=task_save_folder,
+        **wrap_training_params(training_params, type='labeled')
+    )
     for metric in ['dpearsonr', 'drmse', 'cpearsonr', 'crmse']:
         try:
             ft_evaluation_metrics[metric].append(ft_historys[-2][metric][-1])
@@ -96,19 +96,23 @@ def build_encoder(args):
         json.dump(ft_evaluation_metrics, f)
 
     torch.save(target_regressor.encoder.state_dict(), os.path.join('model_save', 'reference_encoder.pt'))
+
+
 def move_encoder(args):
     parsed_ft_params = parsing_utils.parse_hyper_vae_ft_evaluation_result(metric_name=args.metric)
+    parsed_ft_params['train_num_epochs'] = int(parsed_ft_params['train_num_epochs'])
     param_str = dict_to_str(parsed_ft_params)
 
     for file in os.listdir(f'./model_save/vae/gex/{param_str}'):
         if file.startswith('ft_encoder'):
-            shutil.copyfile(os.path.join(f'./model_save/vae/gex/{param_str}',file), os.path.join('./model_save', file))
+            shutil.copyfile(os.path.join(f'./model_save/vae/gex/{param_str}', file), os.path.join('./model_save', file))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('CLEIT reference encoder build')
 
-    parser.add_argument('--metric', dest='metric', nargs='?', default='cpearsonr', choices=['cpearsonr', 'dpearsonr'])
+    parser.add_argument('--metric', dest='metric', nargs='?', default='cpearsonr',
+                        choices=['dpearsonr', 'dspearmanr', 'drmse', 'cpearsonr', 'cspearmanr', 'crmse'])
     parser.add_argument('--measurement', dest='measurement', nargs='?', default='AUC', choices=['AUC', 'LN_IC50'])
     args = parser.parse_args()
 

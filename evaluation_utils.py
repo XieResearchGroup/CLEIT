@@ -73,7 +73,7 @@ def evaluate_target_classification_epoch(classifier, dataloader, device, history
     return history
 
 
-def evaluate_target_regression_epoch(regressor, dataloader, device, history, output_folder=None, seed=None):
+def evaluate_target_regression_epoch(regressor, dataloader, device, history, output_folder=None, seed=None, cv_flag=False):
     y_truths = None
     y_preds = None
     regressor.eval()
@@ -90,8 +90,12 @@ def evaluate_target_regression_epoch(regressor, dataloader, device, history, out
     assert (y_truths.shape == y_preds.shape)
     if output_folder is not None:
         # output prediction
-        pd.DataFrame(y_truths).to_csv(f'{output_folder}/truths_{seed}.csv')
-        pd.DataFrame(y_preds).to_csv(f'{output_folder}/preds_{seed}.csv')
+        if cv_flag:
+            pd.DataFrame(y_truths).to_csv(f'{output_folder}/cv_truths_{seed}.csv')
+            pd.DataFrame(y_preds).to_csv(f'{output_folder}/cv_preds_{seed}.csv')
+        else:
+            pd.DataFrame(y_truths).to_csv(f'{output_folder}/truths_{seed}.csv')
+            pd.DataFrame(y_preds).to_csv(f'{output_folder}/preds_{seed}.csv')
     else:
         history['dpearsonr'].append(np.mean(np.abs([pearsonr(y_truths[:, i][~ma.masked_invalid(y_truths[:, i]).mask],
                                                       y_preds[:, i][~ma.masked_invalid(y_truths[:, i]).mask])[0]

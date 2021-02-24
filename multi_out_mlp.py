@@ -15,7 +15,7 @@ def clones(module, N):
 class MoMLP(nn.Module):
 
     def __init__(self, input_dim: int, output_dim: int, num_shared_layers: int = 1, hidden_dims: List = None,
-                 dop: float = 0.1, act_fn=nn.ReLU, out_fn=None, gr_flag=False, **kwargs) -> None:
+                 dop: float = 0.1, act_fn=nn.SELU, out_fn=None, gr_flag=False, **kwargs) -> None:
         super(MoMLP, self).__init__()
         self.output_dim = output_dim
         self.dop = dop
@@ -72,19 +72,11 @@ class MoMLP(nn.Module):
 
         if out_fn is None:
             output_layer = nn.Sequential(
-                nn.Linear(hidden_dims[-1], hidden_dims[-1], bias=True),
-                # nn.BatchNorm1d(hidden_dims[-1]),
-                act_fn(),
-                nn.Dropout(self.dop),
-                nn.Linear(hidden_dims[-1], 1,bias=False)
+                nn.Linear(hidden_dims[-1], 1,bias=True)
             )
         else:
             output_layer = nn.Sequential(
-                nn.Linear(hidden_dims[-1], hidden_dims[-1], bias=True),
-                # nn.BatchNorm1d(hidden_dims[-1]),
-                act_fn(),
-                nn.Dropout(self.dop),
-                nn.Linear(hidden_dims[-1], 1, bias=False),
+                nn.Linear(hidden_dims[-1], 1, bias=True),
                 out_fn()
             )
         ind_modules.append(output_layer)

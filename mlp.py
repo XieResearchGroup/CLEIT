@@ -5,7 +5,7 @@ from gradient_reversal import RevGrad
 
 class MLP(nn.Module):
 
-    def __init__(self, input_dim: int, output_dim: int, hidden_dims: List = None, dop: float = 0.1, act_fn=nn.ReLU, out_fn=None, gr_flag=False, **kwargs) -> None:
+    def __init__(self, input_dim: int, output_dim: int, hidden_dims: List = None, dop: float = 0.1, act_fn=nn.SELU, out_fn=None, gr_flag=False, **kwargs) -> None:
         super(MLP, self).__init__()
         self.output_dim = output_dim
         self.dop = dop
@@ -40,18 +40,10 @@ class MLP(nn.Module):
 
         if out_fn is None:
             self.output_layer = nn.Sequential(
-                nn.Linear(hidden_dims[-1], hidden_dims[-1], bias=True),
-                # nn.BatchNorm1d(hidden_dims[-1]),
-                act_fn(),
-                nn.Dropout(self.dop),
                 nn.Linear(hidden_dims[-1], output_dim, bias=True)
             )
         else:
             self.output_layer = nn.Sequential(
-                nn.Linear(hidden_dims[-1], hidden_dims[-1], bias=True),
-                # nn.BatchNorm1d(hidden_dims[-1]),
-                act_fn(),
-                nn.Dropout(self.dop),
                 nn.Linear(hidden_dims[-1], output_dim, bias=True),
                 out_fn()
             )

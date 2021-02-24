@@ -74,7 +74,6 @@ def regression_train_step(model, batch, device, optimizer, history, scheduler=No
 def fine_tune_encoder(encoder, train_dataloader, val_dataloader, seed, task_save_folder, test_dataloader=None,
                       metric_name='cpearsonr',
                       normalize_flag=False, **kwargs):
-
     target_decoder = MoMLP(input_dim=kwargs['latent_dim'],
                            output_dim=kwargs['output_dim'],
                            hidden_dims=kwargs['regressor_hidden_dims'],
@@ -169,7 +168,6 @@ def fine_tune_encoder(encoder, train_dataloader, val_dataloader, seed, task_save
 
 def fine_tune_encoder_new(encoder, train_dataloader, val_dataloader, seed, task_save_folder, test_dataloader=None,
                           normalize_flag=False, **kwargs):
-
     target_decoder = MoMLP(input_dim=kwargs['latent_dim'],
                            output_dim=kwargs['output_dim'],
                            hidden_dims=kwargs['regressor_hidden_dims'],
@@ -235,13 +233,15 @@ def fine_tune_encoder_new(encoder, train_dataloader, val_dataloader, seed, task_
                                      device=kwargs['device'],
                                      history=None,
                                      seed=seed,
+                                     cv_flag=True,
                                      output_folder=kwargs['model_save_folder'])
-    evaluate_target_regression_epoch(regressor=target_regressor,
-                                     dataloader=test_dataloader,
-                                     device=kwargs['device'],
-                                     history=None,
-                                     seed=seed,
-                                     output_folder=kwargs['model_save_folder'])
+    if test_dataloader is not None:
+        evaluate_target_regression_epoch(regressor=target_regressor,
+                                         dataloader=test_dataloader,
+                                         device=kwargs['device'],
+                                         history=None,
+                                         seed=seed,
+                                         output_folder=kwargs['model_save_folder'])
 
     return target_regressor, (target_regression_train_history, target_regression_eval_train_history,
                               target_regression_eval_val_history, target_regression_eval_test_history)

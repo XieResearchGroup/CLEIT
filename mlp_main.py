@@ -4,7 +4,7 @@ from mlp import MLP
 from multi_out_mlp import MoMLP
 from encoder_decoder import EncoderDecoder
 from loss_and_metrics import masked_mse, masked_simse
-from ae import AE
+from vae import VAE
 from data import DataProvider
 import torch
 import json
@@ -36,7 +36,7 @@ def regression_train_step(model, batch, device, optimizer, history, scheduler=No
 def fine_tune_encoder(train_dataloader, val_dataloader, seed, test_dataloader=None,
                       metric_name='cpearsonr',
                       normalize_flag=False, **kwargs):
-    autoencoder = AE(input_dim=kwargs['input_dim'],
+    autoencoder = VAE(input_dim=kwargs['input_dim'],
                      latent_dim=kwargs['latent_dim'],
                      hidden_dims=kwargs['encoder_hidden_dims'],
                      dop=kwargs['dop']).to(kwargs['device'])
@@ -87,6 +87,8 @@ def fine_tune_encoder(train_dataloader, val_dataloader, seed, test_dataloader=No
         if save_flag:
             torch.save(target_regressor.state_dict(),
                        os.path.join(kwargs['model_save_folder'], f'target_regressor_{seed}.pt'))
+            torch.save(target_regressor.encoder.state_dict(),
+                       os.path.join(kwargs['model_save_folder'], f'ft_encoder_{seed}.pt'))
         if stop_flag:
             break
 
@@ -98,13 +100,16 @@ def fine_tune_encoder(train_dataloader, val_dataloader, seed, test_dataloader=No
                                      device=kwargs['device'],
                                      history=None,
                                      seed=seed,
+                                     cv_flag=True,
                                      output_folder=kwargs['model_save_folder'])
-    evaluate_target_regression_epoch(regressor=target_regressor,
-                                     dataloader=test_dataloader,
-                                     device=kwargs['device'],
-                                     history=None,
-                                     seed=seed,
-                                     output_folder=kwargs['model_save_folder'])
+    if test_dataloader is not None:
+        evaluate_target_regression_epoch(regressor=target_regressor,
+                                         dataloader=test_dataloader,
+                                         device=kwargs['device'],
+                                         history=None,
+                                         seed=seed,
+                                         output_folder=kwargs['model_save_folder'])
+
 
     return target_regressor, (target_regression_train_history, target_regression_eval_train_history,
                               target_regression_eval_val_history, target_regression_eval_test_history)

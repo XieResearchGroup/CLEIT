@@ -8,7 +8,7 @@ from collections import defaultdict
 import itertools
 
 from data import DataProvider
-import train_vae
+import train_ae
 import fine_tuning
 
 from copy import deepcopy
@@ -63,7 +63,7 @@ def dict_to_str(d):
 
 
 def main(args, update_params_dict):
-    train_fn = train_vae.train_vae
+    train_fn = train_ae.train_ae
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     with open(os.path.join('model_save', 'train_params.json'), 'r') as f:
         training_params = json.load(f)
@@ -74,12 +74,12 @@ def main(args, update_params_dict):
     training_params.update(
         {
             'device': device,
-            'model_save_folder': os.path.join('model_save', 'vae', args.omics, param_str),
+            'model_save_folder': os.path.join('model_save', 'ae', args.omics, param_str),
             'es_flag': False,
             'retrain_flag': args.retrain_flag
         })
     safe_make_dir(training_params['model_save_folder'])
-    task_save_folder = os.path.join('model_save', 'vae', args.omics, param_str)
+    task_save_folder = os.path.join('model_save', 'ae', args.omics, param_str)
     safe_make_dir(task_save_folder)
 
     random.seed(2020)
