@@ -154,6 +154,7 @@ def fine_tune_encoder(encoder, train_dataloader, val_dataloader, seed, task_save
                                      device=kwargs['device'],
                                      history=None,
                                      seed=seed,
+                                     cv_flag=True,
                                      output_folder=kwargs['model_save_folder'])
     evaluate_target_regression_epoch(regressor=target_regressor,
                                      dataloader=test_dataloader,

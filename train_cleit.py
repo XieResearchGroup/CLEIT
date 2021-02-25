@@ -2,6 +2,7 @@ import torch
 import os
 from collections import defaultdict
 from vae import VAE
+from ae import AE
 from loss_and_metrics import contrastive_loss
 from copy import deepcopy
 
@@ -20,7 +21,7 @@ def cleit_train_step(ae, reference_encoder, batch, device, optimizer, history, s
     x_m_code = ae.encoder(x_m)
     x_g_code = reference_encoder(x_g)
 
-    code_loss = contrastive_loss(y_true=x_g_code, y_pred=x_m_code,device=device)
+    code_loss = contrastive_loss(y_true=x_g_code, y_pred=x_m_code, device=device)
     loss = loss_dict['loss'] + code_loss
     optimizer.zero_grad()
 
@@ -44,10 +45,10 @@ def train_cleit(dataloader, seed, **kwargs):
     :return:
     """
 
-    autoencoder = VAE(input_dim=kwargs['input_dim'],
-                      latent_dim=kwargs['latent_dim'],
-                      hidden_dims=kwargs['encoder_hidden_dims'],
-                      dop=kwargs['dop']).to(kwargs['device'])
+    autoencoder = AE(input_dim=kwargs['input_dim'],
+                     latent_dim=kwargs['latent_dim'],
+                     hidden_dims=kwargs['encoder_hidden_dims'],
+                     dop=kwargs['dop']).to(kwargs['device'])
 
     # get reference encoder
     aux_ae = deepcopy(autoencoder)
@@ -72,10 +73,10 @@ def train_cleit(dataloader, seed, **kwargs):
                                                          device=kwargs['device'],
                                                          optimizer=ae_optimizer,
                                                          history=ae_eval_train_history)
-        torch.save(autoencoder.state_dict(), os.path.join(kwargs['model_save_folder'], 'cleit_vae.pt'))
+        torch.save(autoencoder.state_dict(), os.path.join(kwargs['model_save_folder'], 'cleit_ae.pt'))
     else:
         try:
-            autoencoder.load_state_dict(torch.load(os.path.join(kwargs['model_save_folder'], 'cleit_vae.pt')))
+            autoencoder.load_state_dict(torch.load(os.path.join(kwargs['model_save_folder'], 'cleit_ae.pt')))
         except FileNotFoundError:
             raise Exception("No pre-trained encoder")
 

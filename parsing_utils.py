@@ -19,7 +19,7 @@ def parse_param_str(param_str):
     return {matches[0][i]: float(matches[0][i + 1]) for i in range(0, len(matches[0]), 2) if matches[0][i] != ''}
 
 def parse_hyper_vae_ft_evaluation_result(metric_name='cpearsonr'):
-    folder = 'model_save/vae/gex/'
+    folder = 'model_save/ae/gex/'
     evaluation_metrics = {}
     evaluation_metrics_std = {}
     file_pattern = '(pretrain|train)+.*(dop+).*(ft)+.*\.json'

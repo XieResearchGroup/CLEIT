@@ -4,6 +4,8 @@ import torch.autograd as autograd
 from collections import defaultdict
 from itertools import chain
 from vae import VAE
+from ae import AE
+
 from evaluation_utils import *
 from mlp import MLP
 from encoder_decoder import EncoderDecoder
@@ -33,7 +35,7 @@ def compute_gradient_penalty(critic, real_samples, fake_samples, device):
 
 
 def critic_train_step(critic, ae, reference_encoder, transmitter, batch, device, optimizer, history, scheduler=None,
-                          clip=None, gp=None):
+                      clip=None, gp=None):
     critic.zero_grad()
     ae.zero_grad()
     reference_encoder.zero_grad()
@@ -75,7 +77,7 @@ def critic_train_step(critic, ae, reference_encoder, transmitter, batch, device,
 
 
 def gan_gen_train_step(critic, ae, transmitter, batch, device, optimizer, alpha, history,
-                           scheduler=None):
+                       scheduler=None):
     critic.zero_grad()
     ae.zero_grad()
     transmitter.zero_grad()
@@ -105,11 +107,11 @@ def gan_gen_train_step(critic, ae, transmitter, batch, device, optimizer, alpha,
     return history
 
 
-def train_cleita(dataloader,seed, **kwargs):
-    autoencoder = VAE(input_dim=kwargs['input_dim'],
-                      latent_dim=kwargs['latent_dim'],
-                      hidden_dims=kwargs['encoder_hidden_dims'],
-                      dop=kwargs['dop']).to(kwargs['device'])
+def train_cleita(dataloader, seed, **kwargs):
+    autoencoder = AE(input_dim=kwargs['input_dim'],
+                     latent_dim=kwargs['latent_dim'],
+                     hidden_dims=kwargs['encoder_hidden_dims'],
+                     dop=kwargs['dop']).to(kwargs['device'])
 
     # get reference encoder
     aux_ae = deepcopy(autoencoder)
@@ -145,30 +147,30 @@ def train_cleita(dataloader,seed, **kwargs):
                 print(f'confounder wgan training epoch {epoch}')
             for step, batch in enumerate(dataloader):
                 critic_train_history = critic_train_step(critic=confounding_classifier,
-                                                             ae=autoencoder,
-                                                             reference_encoder=reference_encoder,
-                                                             transmitter=transmitter,
-                                                             batch=batch,
-                                                             device=kwargs['device'],
-                                                             optimizer=classifier_optimizer,
-                                                             history=critic_train_history,
-                                                             # clip=0.1,
-                                                             gp=10.0)
+                                                         ae=autoencoder,
+                                                         reference_encoder=reference_encoder,
+                                                         transmitter=transmitter,
+                                                         batch=batch,
+                                                         device=kwargs['device'],
+                                                         optimizer=classifier_optimizer,
+                                                         history=critic_train_history,
+                                                         # clip=0.1,
+                                                         gp=10.0)
                 if (step + 1) % 5 == 0:
                     gen_train_history = gan_gen_train_step(critic=confounding_classifier,
-                                                               ae=autoencoder,
-                                                               transmitter=transmitter,
-                                                               batch=batch,
-                                                               device=kwargs['device'],
-                                                               optimizer=cleit_optimizer,
-                                                               alpha=1.0,
-                                                               history=gen_train_history)
+                                                           ae=autoencoder,
+                                                           transmitter=transmitter,
+                                                           batch=batch,
+                                                           device=kwargs['device'],
+                                                           optimizer=cleit_optimizer,
+                                                           alpha=1.0,
+                                                           history=gen_train_history)
 
-        torch.save(autoencoder.state_dict(), os.path.join(kwargs['model_save_folder'], 'cleit_vae.pt'))
+        torch.save(autoencoder.state_dict(), os.path.join(kwargs['model_save_folder'], 'cleit_ae.pt'))
         torch.save(transmitter.state_dict(), os.path.join(kwargs['model_save_folder'], 'transmitter.pt'))
     else:
         try:
-            autoencoder.load_state_dict(torch.load(os.path.join(kwargs['model_save_folder'], 'cleit_vae.pt')))
+            autoencoder.load_state_dict(torch.load(os.path.join(kwargs['model_save_folder'], 'cleit_ae.pt')))
             transmitter.load_state_dict(torch.load(os.path.join(kwargs['model_save_folder'], 'transmitter.pt')))
         except FileNotFoundError:
             raise Exception("No pre-trained encoder")

@@ -103,9 +103,9 @@ def move_encoder(args):
     parsed_ft_params['train_num_epochs'] = int(parsed_ft_params['train_num_epochs'])
     param_str = dict_to_str(parsed_ft_params)
 
-    for file in os.listdir(f'./model_save/vae/gex/{param_str}'):
+    for file in os.listdir(f'./model_save/ae/gex/{param_str}'):
         if file.startswith('ft_encoder'):
-            shutil.copyfile(os.path.join(f'./model_save/vae/gex/{param_str}', file), os.path.join('./model_save', file))
+            shutil.copyfile(os.path.join(f'./model_save/ae/gex/{param_str}', file), os.path.join('./model_save', file))
 
 
 if __name__ == '__main__':
