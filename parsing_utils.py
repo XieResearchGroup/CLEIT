@@ -12,6 +12,9 @@ def get_largest_kv(d, std_dict):
     k = max(d.items(), key=itemgetter(1))[0]
     return k, d[k], std_dict[k]
 
+def get_smallest_kv(d, std_dict):
+    k = min(d.items(), key=itemgetter(1))[0]
+    return k, d[k], std_dict[k]
 
 def parse_param_str(param_str):
     pattern = re.compile('(pretrain_num_epochs)?_?(\d+)?_?(train_num_epochs)_(\d+)_(dop)_(\d\.\d)')
@@ -122,7 +125,21 @@ def generate_hyper_ft_report(metric_name='cpearsonr', measurement='AUC'):
         else:
             #folder = f'model_save/{method}'
             try:
-                param_str, report.loc[method, 'mean'], report.loc[method, 'std'] = get_largest_kv(d=
+                if metric_name.endswith('mse'):
+                    param_str, report.loc[method, 'mean'], report.loc[method, 'std'] = get_smallest_kv(d=
+                                                                                                      parse_hyper_ft_evaluation_result(
+                                                                                                          method=method,
+                                                                                                          metric_name=metric_name,
+                                                                                                          measurement=measurement)[
+                                                                                                          0],
+                                                                                                      std_dict=
+                                                                                                      parse_hyper_ft_evaluation_result(
+                                                                                                          method=method,
+                                                                                                          metric_name=metric_name,
+                                                                                                          measurement=measurement)[
+                                                                                                          1])
+                else:
+                    param_str, report.loc[method, 'mean'], report.loc[method, 'std'] = get_largest_kv(d=
                                                                                                   parse_hyper_ft_evaluation_result(
                                                                                                       method=method,
                                                                                                       metric_name=metric_name,
